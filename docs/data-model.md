@@ -12,7 +12,7 @@
 |---------|-------------------|-----------------------|
 | `auth.users` | Das Anmeldekonto (E-Mail, Passwort-Hash, Anmeldezeitpunkte). Von Supabase Auth verwaltet, nicht von uns. | nur die Person selbst; die App liest daraus nur die eigene ID und E-Mail |
 | `profiles` | Das Profil zu einem Konto: Anzeigename und Anlagedatum. Entsteht automatisch bei der Registrierung. | nur die Person selbst |
-| `expenses` | Eine einzelne Ausgabe: Betrag in CHF, Kategorie, Ausgabedatum, optionale Notiz — und bei Fremdwährung zusätzlich Originalbetrag, Währung, verwendeter Kurs, Kursdatum und Kursquelle. | nur die Person, die sie erfasst hat |
+| `expenses` | Eine einzelne Ausgabe: Betrag in CHF, Kategorie, Ausgabedatum, optionale Notiz — und bei Fremdwährung zusätzlich Originalbetrag, Währung, verwendeter Kurs, Kursdatum und Kursquelle (PROJ-3). Angelegt von PROJ-2. | nur die Person, die sie erfasst hat |
 
 Kategorien sind **keine eigene Entität**: Sie sind eine feste, im Code definierte Liste (Lebensmittel, Wohnen, Mobilität, Freizeit, Gesundheit, Sonstiges). Eigene Kategorien sind ein Non-Goal dieser Version.
 
