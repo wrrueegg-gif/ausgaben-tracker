@@ -1,64 +1,55 @@
-# App Shell & Navigation
+# App-Rahmen & Navigation
 
-> The app-wide map of **the frame every feature is shown inside** — navigation, layout regions, and the patterns each page repeats.
+> Die app-weite Karte des **Rahmens, in dem jedes Feature gezeigt wird** — Navigation, Layout-Bereiche und die Muster, die jede Seite wiederholt.
 >
-> - Created by `/init` (the first holistic pass: top-level areas + layout).
-> - Refined by `/architecture` as each feature is designed.
-> - **Altitude:** structure, not styling. Which areas exist, where they live, who sees them, what every page shares. Colors, fonts, and component styling belong in `docs/design-system.md`; a single page's internals belong in that feature's `design.md`.
->
-> Without this map the shell grows by accretion — every feature adds a nav item and a header variant in its own `design.md`, and nobody owns the whole. Rebuilding it later is then expensive, because no acceptance criterion says what it is supposed to do.
+> - Erstellt von `/init` (der erste ganzheitliche Durchgang: oberste Bereiche + Layout).
+> - Verfeinert von `/architecture`, sobald ein Feature entworfen wird.
+> - **Flughöhe:** Struktur, nicht Gestaltung. Farben, Schriften und Komponenten-Styling gehören in `docs/design-system.md`; die Innereien einer einzelnen Seite in das `design.md` ihres Features.
 
-## Owning feature
+## Verantwortliches Feature
 
-_The feature whose `spec.md` carries the shell's acceptance criteria (e.g. `PROJ-1 App Shell & Navigation`), or "none — shell is trivial" for a single-screen app. Changes to the shell are refined there, not invented per feature._
+Owner: **PROJ-1 — Benutzerkonto & Login.** Dieses Produkt ist ein Zwei-Seiten-MVP (öffentliche Anmeldeseiten, ein geschützter Bereich). Der Rahmen besteht aus einer schmalen Kopfzeile mit Produktnamen und Abmelden-Knopf, und PROJ-1 ist das Feature, das den geschützten Bereich samt dieser Kopfzeile überhaupt erst herstellt. **Ein eigenes „App Shell & Navigation"-Feature gibt es bewusst nicht** — bei zwei Seiten wäre es reine Zeremonie. Änderungen am Rahmen laufen über `/refine PROJ-1`.
 
-Owner: _PROJ-X — always a feature: the App Shell feature if one exists, otherwise the feature that builds the screen the frame sits on. Changes to the frame go through `/refine` on this feature._
+## Oberste Bereiche
 
-## Top-Level Areas
+| Bereich | Was die Person dort tut | Sichtbar für | Verantwortliches Feature |
+|---------|-------------------------|--------------|--------------------------|
+| Anmelden (`/login`) | Mit E-Mail und Passwort anmelden | abgemeldete Personen | PROJ-1 |
+| Registrieren (`/signup`) | Ein Konto anlegen | abgemeldete Personen | PROJ-1 |
+| Übersicht (`/app`) | Ausgaben erfassen, Liste und Monatsauswertung ansehen | angemeldete Personen | PROJ-2 |
 
-_The places a user can navigate to. One row per nav entry — not one row per page._
+Es gibt keine Navigationsleiste mit mehreren Zielen: Angemeldet existiert genau ein Bereich. Zwischen Anmelden und Registrieren wird über einen Textlink am Formularende gewechselt.
 
-| Area | What the user does there | Visible to | Owning feature |
-|------|--------------------------|------------|----------------|
-| _Dashboard_ | _Overview after login_ | _signed-in users_ | _PROJ-2_ |
-| _..._ | _..._ | _..._ | _..._ |
+## Layout-Bereiche
 
-## Layout Regions
+- **Kopfzeile (nur angemeldet):** links der Produktname „Ausgaben-Tracker", rechts die E-Mail der angemeldeten Person und der Abmelden-Knopf. Volle Breite, unten abgegrenzt durch eine Linie (`border`), Inhalt auf maximal `max-w-3xl` zentriert.
+- **Inhalt:** die Oberfläche des jeweiligen Features, zentriert in derselben Breite, mit Abstand nach oben und unten.
+- **Keine Seitenleiste** — bei einem einzigen angemeldeten Bereich gibt es nichts zu navigieren.
+- **Anmeldeseiten:** keine Kopfzeile. Eine zentrierte Karte (`max-w-sm`) auf leerem Hintergrund, Produktname als Überschrift darüber.
+- **Mobil (unter `md`):** identischer Aufbau, nur schmaler; die Kopfzeile bleibt einzeilig, die E-Mail-Adresse wird unter `sm` ausgeblendet, der Abmelden-Knopf bleibt immer sichtbar.
 
-_The fixed frame. Name each region and what belongs in it._
+## Seitenmuster
 
-- **Sidebar:** _the top-level areas, logo at the top, account menu at the bottom_
-- **Header:** _page title, primary action for that page_
-- **Content:** _the feature's own UI_
-- **Mobile:** _how the sidebar behaves below `md` (burger / drawer / bottom bar)_
+- **Seitenkopf:** Titel links (`text-2xl font-semibold`), primäre Aktion rechts auf derselben Zeile.
+- **Ladezustand:** Skelettflächen an der Stelle des späteren Inhalts (Liste, Summenkarten) — kein Springen des Layouts, kein Vollbild-Spinner.
+- **Leerzustand:** eine kurze Zeile in gedämpfter Farbe, die sagt, was zu tun ist („Noch keine Ausgaben in diesem Monat. Erfasse deine erste Ausgabe.").
+- **Fehlerzustand:** eine Meldung im Inhaltsbereich (`Alert`, Variante `destructive`) mit Klartext und, wo sinnvoll, einem Knopf zum erneuten Versuchen. Formularfehler stehen direkt unter dem betroffenen Feld.
+- **Rückmeldungen:** kurze Bestätigungen als Toast unten rechts (`sonner`); eine Rückmeldung, die eine Entscheidung verlangt, ist kein Toast, sondern ein Dialog.
 
-## Page Pattern
+## Anmeldezustände
 
-_What every page repeats, so features don't each invent their own. `/build` follows this instead of guessing._
+- **Abgemeldet:** erreichbar sind nur `/login` und `/signup`. Der Aufruf von `/app` leitet auf `/login` um.
+- **Angemeldet:** erreichbar ist `/app` samt Kopfzeile. Der Aufruf von `/login` oder `/signup` leitet auf `/app` um.
+- **Rollen:** keine. Alle angemeldeten Personen haben dieselben Rechte an ihren eigenen Daten.
 
-- **Page header:** _title, optional subtitle, primary action on the right_
-- **Loading state:** _skeleton / spinner, and where_
-- **Empty state:** _what an area with no data shows_
-- **Error state:** _how a failed load is presented_
-- **Toasts / feedback:** _where confirmations appear_
+## Rahmen-Komponenten
 
-## Auth States
-
-_The shell usually differs by who is looking. Say how._
-
-- **Signed out:** _which areas are reachable, what the shell shows_
-- **Signed in:** _..._
-- **Roles (if any):** _which areas each role sees_
-
-## Shell Components
-
-_The shared building blocks and where they live, so nothing gets rebuilt per feature._
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| _AppSidebar_ | _`src/components/app-sidebar.tsx`_ | _top-level navigation_ |
-| _..._ | _..._ | _..._ |
+| Komponente | Datei | Zweck |
+|------------|-------|-------|
+| `AppHeader` | `src/components/app-header.tsx` | Kopfzeile des geschützten Bereichs: Produktname, E-Mail, Abmelden-Knopf |
+| Layout des geschützten Bereichs | `src/app/app/layout.tsx` | Setzt die Kopfzeile und die Inhaltsbreite; erzwingt die Anmeldung |
+| Layout der Anmeldeseiten | `src/app/(auth)/layout.tsx` | Zentrierte Karte für Anmelden und Registrieren |
 
 ---
 
-_This is a living document. When `/architecture` designs a feature that adds a nav entry, a layout region, or a new page pattern, it updates this map first, so later features build against an accurate frame. Behavior changes to the shell go through `/refine` on the owning feature — never straight into a feature's `design.md`._
+_Dies ist ein lebendes Dokument. Verhaltensänderungen am Rahmen laufen über `/refine` auf dem verantwortlichen Feature — nie direkt in das `design.md` eines anderen Features._

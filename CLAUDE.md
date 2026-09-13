@@ -69,6 +69,17 @@ docs/
 - **Tests:** Unit tests co-located next to source files (`useHook.test.ts` next to `useHook.ts`), written by `/qa`. E2E tests live in `tests/`, added on demand by `/e2e-tests` for critical core journeys only.
 - **Supabase environments:** The test-vs-live strategy (`local` / `two-projects` / `single` / `branching`) is chosen at `/init` and recorded in `docs/PRD.md` → Constraints. Default is **`local`** — Supabase runs in Docker while you build, then migrates to a hosted live project at `/deploy` (`supabase db push`). `.env.local` always holds **test** keys, never live. Schema changes are captured as `supabase/migrations/*.sql` and promoted to production at `/deploy`.
 
+## How This Project Runs
+
+Decided at `/init` and binding for every skill. Where this section and a stack pack disagree, this section wins — the pack describes the kit's default, this describes the project.
+
+- **Supabase: one hosted project, `Environment strategy: single`.** There is no local Docker stack and no `supabase link`. The project lives in region `eu-central-1` (Frankfurt) on the Free plan. Test and live are the same instance, which is why nothing is ever seeded with throwaway data and no migration is applied "just to see".
+- **Schema changes: file first, then apply.** Every change is written as `supabase/migrations/<NNNN>_<name>.sql` (four-digit, sequential) **and only then** applied to the hosted project via the Supabase MCP tool `apply_migration`, with the same name and the same SQL. The file is the record; the MCP call is how it reaches the database. A migration that has been applied is frozen — corrections come as a new file. The migration files are also what lets a reviewer reproduce the database from scratch.
+- **The app is verified at `http://localhost:3000`** (`npm run dev`). There is no deployment; `/deploy` is out of scope for this project.
+- **Tests never touch the database.** Vitest tests mock the Supabase client (`vi.mock('@/lib/supabase/server')`), because test == live here. Anything that genuinely needs a live round-trip is verified by hand in `/qa` and recorded there with its evidence.
+- **Rate limiting is in-memory** (a module-level `Map` in the Next.js server process), not Upstash. Rationale: the project must cost nothing and must run for a reviewer without a second account. The limit is per IP *and* per account, and the trade-off (resets on restart, per-instance) is recorded in the owning feature's `design.md`.
+- **External integration: the Frankfurter API** (`https://api.frankfurter.dev`, ECB reference rates, free, **no API key**). It is called server-side only, never from the browser. No other external service is used, and nothing is added that would require a paid plan or a reviewer's own credentials.
+
 ## Build & Test Commands
 
 ```bash

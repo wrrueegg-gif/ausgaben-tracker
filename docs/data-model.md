@@ -1,38 +1,43 @@
-# Data Model
+# Datenmodell
 
-> The app-wide map of **what data this product stores and how it connects** — the shared blueprint every feature's tables conform to.
+> Die app-weite Karte, **welche Daten dieses Produkt speichert und wie sie zusammenhängen** — der gemeinsame Bauplan, dem die Tabellen jedes Features folgen.
 >
-> - Created by `/init` (the first holistic pass: entities + relationships).
-> - Refined by `/architecture` as each feature is designed.
-> - **Altitude:** entities, relationships, and ownership live here (product-level, anyone can read them). Column types, indexes, and exact foreign keys are decided per feature in that feature's `design.md` — not here.
+> - Erstellt von `/init` (der erste ganzheitliche Durchgang: Entitäten + Beziehungen).
+> - Verfeinert von `/architecture`, sobald ein Feature entworfen wird.
+> - **Flughöhe:** Entitäten, Beziehungen und Eigentümerschaft stehen hier (Produktebene, für alle lesbar). Spaltentypen, Indizes und konkrete Fremdschlüssel werden pro Feature in dessen `design.md` entschieden — nicht hier.
 
-## Entities
+## Entitäten
 
-_Each entity is a kind of thing the app stores (a real-world noun). List the ones you know so far with a one-line purpose and who owns or can see it. No column types — just the thing and what it's for._
+| Entität | Was sie darstellt | Gehört / sichtbar für |
+|---------|-------------------|-----------------------|
+| `auth.users` | Das Anmeldekonto (E-Mail, Passwort-Hash, Anmeldezeitpunkte). Von Supabase Auth verwaltet, nicht von uns. | nur die Person selbst; die App liest daraus nur die eigene ID und E-Mail |
+| `profiles` | Das Profil zu einem Konto: Anzeigename und Anlagedatum. Entsteht automatisch bei der Registrierung. | nur die Person selbst |
+| `expenses` | Eine einzelne Ausgabe: Betrag in CHF, Kategorie, Ausgabedatum, optionale Notiz — und bei Fremdwährung zusätzlich Originalbetrag, Währung, verwendeter Kurs, Kursdatum und Kursquelle. | nur die Person, die sie erfasst hat |
 
-| Entity | What it represents | Owned by / who can see it |
-|--------|--------------------|---------------------------|
-| _profiles_ | _A user's account profile_ | _the user themselves_ |
-| _..._ | _..._ | _..._ |
+Kategorien sind **keine eigene Entität**: Sie sind eine feste, im Code definierte Liste (Lebensmittel, Wohnen, Mobilität, Freizeit, Gesundheit, Sonstiges). Eigene Kategorien sind ein Non-Goal dieser Version.
 
-## Relationships
+Wechselkurse sind **keine eigene Entität**: Der Kurs wird zum Zeitpunkt der Erfassung bei der Frankfurter-API geholt und als Wert **auf der Ausgabe selbst** festgeschrieben. Das ist Absicht — eine Ausgabe muss auch in einem Jahr noch zeigen, mit welchem Kurs sie umgerechnet wurde, unabhängig davon, was die API heute liefert.
 
-_How the entities connect, in plain language. This is where coherence comes from — get the connections right once, up front._
+## Beziehungen
 
-- _A profile has many ..._
-- _Each ... belongs to exactly one ..._
-- _A ... can have many ..._
+- Zu jedem Konto (`auth.users`) gehört genau ein `profiles`-Eintrag, angelegt beim Registrieren.
+- Ein Profil hat viele `expenses`.
+- Jede `expenses`-Zeile gehört zu genau einem Konto und ist nur für dieses sichtbar.
+- Jede `expenses`-Zeile trägt ihre Währungsangaben in sich; sie verweist auf keine Kurstabelle.
 
-## Diagram (optional)
-
-_A simple text sketch of the model, filled in as it firms up._
+## Diagramm
 
 ```
-profiles
-  └─ owns many ...
-        └─ has many ...
+auth.users  (Supabase Auth)
+  └─ hat genau ein  profiles
+        └─ hat viele  expenses
+              └─ trägt ihre Währungs- und Kursangaben als eigene Felder
 ```
+
+## Eigentümerschaft und Zugriff
+
+Jede Tabelle, die dieses Produkt anlegt, trägt Row Level Security und Regeln, die den Zugriff auf die eigene Zeile beschränken (`user_id` gleich der angemeldeten Person). Dieses Muster wird von PROJ-1 etabliert und von jedem weiteren Feature kopiert — die Prüfung passiert in der Datenbank, nicht nur im Anwendungscode.
 
 ---
 
-_This is a living document. When `/architecture` designs a feature that introduces or changes an entity, it updates this map first, so later features build against an accurate picture. Run `/init` to create the first version from your feature map._
+_Dies ist ein lebendes Dokument. Wenn `/architecture` ein Feature entwirft, das eine Entität einführt oder verändert, aktualisiert es zuerst diese Karte, damit spätere Features gegen ein zutreffendes Bild bauen._
