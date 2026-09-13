@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { berechneMonatssumme, formatiereDatum, type AusgabeZeile } from './expense-summary'
+import {
+  berechneMonatssumme,
+  farbeVon,
+  formatiereDatum,
+  ringAbschnitte,
+  type AusgabeZeile,
+} from './expense-summary'
 
 function ausgabe(
   betrag: string,
@@ -81,5 +87,69 @@ describe('Monatssumme (AC-6, AC-10)', () => {
 describe('Datumsformat', () => {
   it('zeigt ein Datum in Schweizer Schreibweise', () => {
     expect(formatiereDatum('2026-09-05')).toBe('05.09.2026')
+  })
+})
+
+describe('Ringgeometrie (AC-13, EC-7)', () => {
+  it('AC-13: Farbe hängt an der Kategorie, nicht an der Rangfolge', () => {
+    // Dieselbe Kategorie behält ihre Farbe, egal wie hoch sie im Monat steht.
+    expect(farbeVon('Lebensmittel')).toBe(1)
+    expect(farbeVon('Sonstiges')).toBe(6)
+    expect(farbeVon('Mobilität')).not.toBe(farbeVon('Freizeit'))
+  })
+
+  it('EC-7: eine einzige Kategorie ergibt einen geschlossenen Ring', () => {
+    const abschnitte = ringAbschnitte(berechneMonatssumme([ausgabe('40.00', 'Wohnen')]))
+
+    expect(abschnitte).toHaveLength(1)
+    expect(abschnitte[0]!.anteil).toBe(100)
+    expect(abschnitte[0]!.versatz).toBe(0)
+  })
+
+  it('AC-13: die Anteile ergeben zusammen genau 100', () => {
+    // Drei gleich grosse Kategorien ergäben gerundet 99.9 und liessen einen
+    // sichtbaren Spalt im Ring stehen.
+    const abschnitte = ringAbschnitte(
+      berechneMonatssumme([
+        ausgabe('10.00', 'Wohnen'),
+        ausgabe('10.00', 'Freizeit'),
+        ausgabe('10.00', 'Gesundheit'),
+      ])
+    )
+
+    const summe = abschnitte.reduce((s, a) => s + a.anteil, 0)
+    expect(Math.round(summe * 10) / 10).toBe(100)
+  })
+
+  it('AC-13: jeder Abschnitt beginnt dort, wo der vorige endet', () => {
+    const abschnitte = ringAbschnitte(
+      berechneMonatssumme([
+        ausgabe('50.00', 'Wohnen'),
+        ausgabe('30.00', 'Freizeit'),
+        ausgabe('20.00', 'Mobilität'),
+      ])
+    )
+
+    expect(abschnitte[0]!.versatz).toBe(0)
+    for (let i = 1; i < abschnitte.length; i++) {
+      const erwartet = abschnitte[i - 1]!.versatz + abschnitte[i - 1]!.anteil
+      expect(abschnitte[i]!.versatz).toBeCloseTo(erwartet, 1)
+    }
+  })
+
+  it('AC-13: die Abschnitte stehen in derselben Reihenfolge wie die Aufstellung', () => {
+    const summe = berechneMonatssumme([
+      ausgabe('10.00', 'Freizeit'),
+      ausgabe('50.00', 'Wohnen'),
+      ausgabe('25.00', 'Lebensmittel'),
+    ])
+
+    expect(ringAbschnitte(summe).map((a) => a.kategorie)).toEqual(
+      summe.jeKategorie.map((k) => k.kategorie)
+    )
+  })
+
+  it('AC-16: ein leerer Monat hat keine Abschnitte', () => {
+    expect(ringAbschnitte(berechneMonatssumme([]))).toEqual([])
   })
 })

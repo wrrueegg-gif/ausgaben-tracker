@@ -55,7 +55,7 @@ Format: HSL-Tripel, genau so wie in `globals.css` einzutragen (`--primary: 173 5
 | `--input` | `200 12% 22%` |
 | `--ring` | `173 52% 46%` |
 
-**Hell und dunkel sind beide von Anfang an definiert.** Die App folgt der Systemeinstellung; einen Umschalter gibt es in dieser Version nicht.
+**Hell und dunkel sind beide von Anfang an definiert.** Die App folgt der Systemeinstellung über `prefers-color-scheme`; einen Umschalter gibt es in dieser Version nicht. Die Klasse `.dark` bleibt zusätzlich bestehen, falls später doch einer kommt.
 
 ### Zustände der Hauptfarbe
 
@@ -64,6 +64,29 @@ Die Hauptfarbe wird nie flach über grosse Flächen gelegt. Es gibt drei abgelei
 - **Hover:** um ca. 6 % dunkler (hell) bzw. heller (dunkel).
 - **Aktiv/gedrückt:** um ca. 12 % dunkler bzw. heller.
 - **Dezenter Hintergrund:** `--accent` (siehe Tabelle) — für ausgewählte Zeilen und Hervorhebungen.
+
+### Farben der Kategorien im Diagramm
+
+Sechs Token, fest je Kategorie und nicht nach Rangfolge vergeben — eine Kategorie soll ihre Farbe behalten, auch wenn sie im nächsten Monat an anderer Stelle steht.
+
+| Token | Kategorie | Hell | Dunkel |
+|-------|-----------|------|--------|
+| `--chart-1` | Lebensmittel | `173 58% 34%` | `173 52% 48%` |
+| `--chart-2` | Wohnen | `202 60% 40%` | `202 62% 58%` |
+| `--chart-3` | Mobilität | `262 45% 52%` | `262 55% 70%` |
+| `--chart-4` | Freizeit | `25 75% 48%` | `25 80% 62%` |
+| `--chart-5` | Gesundheit | `340 58% 48%` | `340 65% 66%` |
+| `--chart-6` | Sonstiges | `200 9% 48%` | `200 11% 64%` |
+
+Die Farbe steht nie allein: Im Ring liegt sie neben dem Namen in der Aufstellung, und jede Zeile nennt Betrag und Anteil als Zahl. Wer Farben nicht unterscheiden kann, verliert dadurch keine Information.
+
+## Bewegung
+
+Bewegung ist hier Orientierung, nicht Schmuck. Es gibt genau drei Bewegungen, alle einmalig beim Erscheinen: der Ring wächst auf seinen Anteil, die Balken laufen von links ein, die Gesamtsumme zählt hoch. Jede ist nach höchstens 900 ms fertig, und die Abschnitte setzen leicht versetzt ein, damit man die Reihenfolge liest statt eines Zuckens.
+
+Der Leerzustand ist die einzige dauerhafte Bewegung: ein gestrichelter Ring, der 24 Sekunden für eine Umdrehung braucht. Langsam genug, um nicht abzulenken.
+
+**Wer im Betriebssystem „Bewegung reduzieren" eingestellt hat, bekommt keine.** Nicht weniger, sondern gar keine: Eine einzige Regel setzt alle Bildfolgen ab und zeigt jedes Element sofort im Endzustand.
 
 ## Typografie
 
@@ -82,7 +105,7 @@ Die Hauptfarbe wird nie flach über grosse Flächen gelegt. Es gibt drei abgelei
 - **Knöpfe:** Standard ist `size="default"`, `variant="default"` für die eine primäre Aktion einer Seite, `variant="outline"` für alles Sekundäre, `variant="ghost"` in Kopfzeilen und Zeilen, `variant="destructive"` nur fürs Löschen.
 - **Eingabefelder:** volle Breite der Karte, Label immer sichtbar über dem Feld (kein Platzhalter als Label), Fehlermeldung direkt darunter in `text-destructive text-sm`.
 - **Jedes bedienbare Element hat einen sichtbaren Hover- **und** Fokuszustand.** Der Fokusring nutzt `--ring` und wird nie entfernt — Tastaturnutzer haben sonst nichts.
-- **Leerzustand:** eine Zeile in `text-muted-foreground`, die sagt, was zu tun ist — kein Bild, keine Illustration.
+- **Leerzustand:** ein Satz in `text-muted-foreground`, der sagt, was zu tun ist. Wo eine Fläche sonst gänzlich leer bliebe — die Monatsübersicht ohne Ausgaben — steht zusätzlich eine ruhige Grafik, die die Form andeutet, die gleich gefüllt sein wird. Keine Dekoration ohne diesen Zweck.
 - **Ladezustand:** `Skeleton` in der Form des erwarteten Inhalts, nie ein Vollbild-Spinner.
 - **Text steht auf mindestens 4.5:1 Kontrast** gegen den eigenen Hintergrund, in beiden Themes.
 - **shadcn/ui zuerst:** die installierten Komponenten werden benutzt, nie nachgebaut.
