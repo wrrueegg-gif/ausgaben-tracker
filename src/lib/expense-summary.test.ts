@@ -7,7 +7,17 @@ function ausgabe(
   kategorie: AusgabeZeile['category'],
   datum = '2026-09-01'
 ): AusgabeZeile {
-  return { id: `${betrag}-${kategorie}-${datum}`, amount_chf: betrag, category: kategorie, spent_on: datum, note: null }
+  return {
+    id: `${betrag}-${kategorie}-${datum}`,
+    amount_chf: betrag,
+    category: kategorie,
+    spent_on: datum,
+    note: null,
+    currency: 'CHF',
+    amount_original: betrag,
+    exchange_rate: 1,
+    rate_date: datum,
+  }
 }
 
 describe('Monatssumme (AC-6, AC-10)', () => {

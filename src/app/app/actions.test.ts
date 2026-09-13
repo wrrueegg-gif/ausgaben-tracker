@@ -25,6 +25,12 @@ vi.mock('@/lib/supabase/server', () => ({
 const revalidatePath = vi.fn()
 vi.mock('next/cache', () => ({ revalidatePath: (p: string) => revalidatePath(p) }))
 
+const holeKurs = vi.fn()
+vi.mock('@/lib/exchange-rate', () => ({
+  holeKurs: (...args: unknown[]) => holeKurs(...args),
+  KURS_QUELLE: 'Testquelle',
+}))
+
 import { createExpense, deleteExpense } from './actions'
 import { heuteIso } from '@/lib/validation/expense'
 
@@ -35,7 +41,8 @@ function form(werte: Record<string, string>): FormData {
 }
 
 const GUELTIG = {
-  amount_chf: '12.50',
+  amount_original: '12.50',
+  currency: 'CHF',
   category: 'Lebensmittel',
   spent_on: heuteIso(),
   note: 'Znüni',
@@ -45,6 +52,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   deleteChain.eqCalls = []
   deleteChain.result = { error: null }
+  holeKurs.mockResolvedValue({ rate: 1, rateDate: GUELTIG.spent_on })
 })
 
 describe('createExpense', () => {
@@ -58,6 +66,10 @@ describe('createExpense', () => {
     expect(insert).toHaveBeenCalledWith({
       user_id: 'u1',
       amount_chf: 12.5,
+      amount_original: 12.5,
+      currency: 'CHF',
+      exchange_rate: 1,
+      rate_date: GUELTIG.spent_on,
       category: 'Lebensmittel',
       spent_on: GUELTIG.spent_on,
       note: 'Znüni',
@@ -77,9 +89,9 @@ describe('createExpense', () => {
   it('AC-3: gibt einen Feldfehler zurück und fragt die Datenbank gar nicht erst', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
 
-    const state = await createExpense({}, form({ ...GUELTIG, amount_chf: '-1' }))
+    const state = await createExpense({}, form({ ...GUELTIG, amount_original: '-1' }))
 
-    expect(state.fieldErrors?.amount_chf).toBeTruthy()
+    expect(state.fieldErrors?.amount_original).toBeTruthy()
     expect(insert).not.toHaveBeenCalled()
   })
 
@@ -100,6 +112,71 @@ describe('createExpense', () => {
     const state = await createExpense({}, form(GUELTIG))
 
     expect(state.error).toMatch(/konnte nicht gespeichert werden/)
+  })
+})
+
+describe('createExpense mit Fremdwährung (PROJ-3)', () => {
+  it('AC-2: fragt für CHF keinen Kurs ab und speichert Kurs 1', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    insert.mockResolvedValue({ error: null })
+
+    await createExpense({}, form(GUELTIG))
+
+    expect(holeKurs).toHaveBeenCalledWith('CHF', GUELTIG.spent_on)
+    expect(insert.mock.calls[0]![0].exchange_rate).toBe(1)
+  })
+
+  it('AC-3, AC-5: rechnet mit dem Kurs des Ausgabedatums und schreibt ihn fest', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    insert.mockResolvedValue({ error: null })
+    holeKurs.mockResolvedValue({ rate: 0.9451, rateDate: '2026-09-11' })
+
+    await createExpense(
+      {},
+      form({ ...GUELTIG, amount_original: '12.00', currency: 'EUR', spent_on: '2026-09-13' })
+    )
+
+    const zeile = insert.mock.calls[0]![0]
+    expect(holeKurs).toHaveBeenCalledWith('EUR', '2026-09-13')
+    expect(zeile.amount_original).toBe(12)
+    expect(zeile.currency).toBe('EUR')
+    expect(zeile.exchange_rate).toBe(0.9451)
+    // EC-1: the rate date from the answer, not the date of the expense.
+    expect(zeile.rate_date).toBe('2026-09-11')
+    expect(zeile.amount_chf).toBe(11.34)
+  })
+
+  it('AC-9: speichert nichts, wenn die Kursquelle nicht erreichbar ist', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    holeKurs.mockResolvedValue(null)
+
+    const state = await createExpense({}, form({ ...GUELTIG, currency: 'USD' }))
+
+    expect(state.error).toMatch(/Wechselkurs ist gerade nicht abrufbar/)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('EC-4: lehnt einen Betrag ab, der umgerechnet 0.00 CHF ergäbe', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    holeKurs.mockResolvedValue({ rate: 0.0001, rateDate: '2026-09-11' })
+
+    const state = await createExpense(
+      {},
+      form({ ...GUELTIG, amount_original: '0.01', currency: 'EUR' })
+    )
+
+    expect(state.fieldErrors?.amount_original).toMatch(/0.00 CHF/)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('AC-10: lehnt eine Währung ausserhalb der Auswahl ab, ohne zu fragen', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const state = await createExpense({}, form({ ...GUELTIG, currency: 'JPY' }))
+
+    expect(state.fieldErrors?.currency).toBeTruthy()
+    expect(holeKurs).not.toHaveBeenCalled()
+    expect(insert).not.toHaveBeenCalled()
   })
 })
 

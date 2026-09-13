@@ -4,14 +4,35 @@
 // to it. Summed in centimes as integers, because a monthly total has to be right to
 // the centime; the database hands amounts over as strings for the same reason.
 
-import type { Kategorie } from '@/lib/validation/expense'
+import type { Kategorie, Waehrung } from '@/lib/validation/expense'
 
 export type AusgabeZeile = {
   id: string
+  /** AC-6 (PROJ-3): everything is summed from this one, never from the original. */
   amount_chf: string | number
   category: Kategorie
   spent_on: string
   note: string | null
+  // PROJ-3 — what the person actually paid, and how it was converted.
+  currency: Waehrung
+  amount_original: string | number
+  exchange_rate: string | number
+  rate_date: string
+}
+
+export function formatiereBetrag(betrag: number, waehrung: Waehrung): string {
+  return new Intl.NumberFormat('de-CH', {
+    style: 'currency',
+    currency: waehrung,
+    minimumFractionDigits: 2,
+  }).format(betrag)
+}
+
+export function formatiereKurs(kurs: number): string {
+  return new Intl.NumberFormat('de-CH', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(kurs)
 }
 
 export type KategorieSumme = {

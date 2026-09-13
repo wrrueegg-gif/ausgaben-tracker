@@ -9,10 +9,16 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { GET } from './route'
 
+const selectArgumente: string[] = []
+
 /** Minimal stand-in for the query builder: every step returns itself, the end awaits. */
 function query(result: { data: unknown; error?: unknown }) {
   const builder: Record<string, unknown> = {}
-  for (const step of ['select', 'eq', 'order']) {
+  builder.select = (spalten: string) => {
+    selectArgumente.push(spalten)
+    return builder
+  }
+  for (const step of ['eq', 'order']) {
     builder[step] = () => builder
   }
   builder.maybeSingle = async () => result
@@ -22,6 +28,7 @@ function query(result: { data: unknown; error?: unknown }) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  selectArgumente.length = 0
 })
 
 describe('GET /api/export (AC-12)', () => {
@@ -41,7 +48,19 @@ describe('GET /api/export (AC-12)', () => {
     from.mockImplementation((table: string) =>
       table === 'profiles'
         ? query({ data: { id: 'u1', display_name: 'a', created_at: '2026-09-01T10:00:00Z' } })
-        : query({ data: [{ id: 'e1', amount_chf: 12.5 }], error: null })
+        : query({
+            data: [
+              {
+                id: 'e1',
+                amount_chf: 11.34,
+                amount_original: 12,
+                currency: 'EUR',
+                exchange_rate: 0.9451,
+                rate_date: '2026-09-11',
+              },
+            ],
+            error: null,
+          })
     )
 
     const response = await GET()
@@ -51,6 +70,18 @@ describe('GET /api/export (AC-12)', () => {
     expect(inhalt.konto.email).toBe('a@b.ch')
     expect(inhalt.profil.display_name).toBe('a')
     expect(inhalt.ausgaben).toHaveLength(1)
+    // AC-8 (PROJ-3): every column travels, so a column added later cannot be
+    // silently left out of the export.
+    expect(selectArgumente).toContain('*')
+    // The original amount, the currency, the rate and the rate date travel with
+    // the franc amount.
+    expect(inhalt.ausgaben[0]).toMatchObject({
+      amount_chf: 11.34,
+      amount_original: 12,
+      currency: 'EUR',
+      exchange_rate: 0.9451,
+      rate_date: '2026-09-11',
+    })
   })
 
   it('exportiert eine leere Ausgabenliste, solange es die Tabelle noch nicht gibt', async () => {
