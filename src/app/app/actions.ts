@@ -39,7 +39,8 @@ export async function createExpense(
   // AC-12 — no session, nothing is written.
   if (!user) return { error: NICHT_ANGEMELDET }
 
-  const { amount_original, currency, category, spent_on, note } = parsed.value
+  const { amount_original, submission_id, currency, category, spent_on, note } =
+    parsed.value
 
   // AC-2: francs need no rate and no call to the outside.
   // AC-3: a foreign currency is converted with the rate of the day it was spent.
@@ -65,6 +66,7 @@ export async function createExpense(
     // checks the same thing again on the way in.
     const { error } = await supabase.from('expenses').insert({
       user_id: user.id,
+      submission_id,
       amount_chf,
       amount_original,
       currency,
@@ -74,7 +76,9 @@ export async function createExpense(
       spent_on,
       note,
     })
-    if (error) return { error: SPEICHERN_FEHLGESCHLAGEN }
+    // EC-5: the same submission arriving twice hits the unique index. The row it
+    // wanted already exists, so that is success, not a failure.
+    if (error && error.code !== '23505') return { error: SPEICHERN_FEHLGESCHLAGEN }
   } catch {
     // EC-2 (PROJ-2) — the database is unreachable; the form keeps what was typed.
     return { error: SPEICHERN_FEHLGESCHLAGEN }
@@ -86,16 +90,22 @@ export async function createExpense(
   return { gespeichertAm: Date.now() }
 }
 
-export async function deleteExpense(formData: FormData): Promise<void> {
+export type DeleteResult = { error?: string }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export async function deleteExpense(formData: FormData): Promise<DeleteResult> {
   const id = String(formData.get('id') ?? '')
-  if (!id) return
+  // A malformed id would reach Postgres as a broken uuid (22P02) and come back as
+  // an exception; nothing that arrives from a form is trusted to be well shaped.
+  if (!UUID.test(id)) return { error: LOESCHEN_FEHLGESCHLAGEN }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) throw new Error(NICHT_ANGEMELDET)
+  if (!user) return { error: NICHT_ANGEMELDET }
 
   // EC-3 — the filter plus row level security means a guessed id of someone else's
   // expense matches nothing. EC-6 — an already deleted row matches nothing either,
@@ -106,7 +116,9 @@ export async function deleteExpense(formData: FormData): Promise<void> {
     .eq('id', id)
     .eq('user_id', user.id)
 
-  if (error) throw new Error(LOESCHEN_FEHLGESCHLAGEN)
+  // EC-2: a database that does not answer produces a message, not a crashed page.
+  if (error) return { error: LOESCHEN_FEHLGESCHLAGEN }
 
   revalidatePath('/app')
+  return {}
 }

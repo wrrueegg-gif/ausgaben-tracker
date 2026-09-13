@@ -39,7 +39,28 @@ async function clientIp(): Promise<string> {
 }
 
 async function throttleKeys(email: string): Promise<string[]> {
-  return [`account:${email.toLowerCase()}`, `ip:${await clientIp()}`]
+  return [`login:${email.toLowerCase()}`, `login-ip:${await clientIp()}`]
+}
+
+// Sign-up is a credential path too, and it had no brake at all: without this a
+// script can create accounts in bulk, which is exactly what the deliberately
+// omitted CAPTCHA would otherwise have covered. Counted under its own prefix, so
+// a failed sign-up can never lock somebody out of signing in.
+async function signupThrottleKeys(email: string): Promise<string[]> {
+  return [`signup:${email.toLowerCase()}`, `signup-ip:${await clientIp()}`]
+}
+
+/**
+ * The auth library RETURNS a network failure as an error object instead of
+ * throwing it, so a catch block never sees one. Without this check an outage is
+ * indistinguishable from a wrong password — the person is told their password is
+ * wrong, and five outages lock their account for fifteen minutes.
+ */
+function istVerbindungsfehler(error: { name?: string; status?: number } | null): boolean {
+  if (!error) return false
+  if (error.name === 'AuthRetryableFetchError') return true
+  // status 0 means the request never reached anyone; 5xx means it arrived nowhere useful.
+  return error.status === 0 || (typeof error.status === 'number' && error.status >= 500)
 }
 
 export async function signup(
@@ -51,17 +72,31 @@ export async function signup(
   if (!parsed.ok) return { fieldErrors: parsed.fieldErrors }
 
   const { email, password } = parsed.value
+  const keys = await signupThrottleKeys(email)
+
+  const verdict = checkCredentialLimit(keys)
+  if (!verdict.allowed) {
+    return {
+      error: `Zu viele Versuche. Bitte versuche es in ${verdict.retryAfterMinutes} Minuten erneut.`,
+    }
+  }
+
   const supabase = await createClient()
 
   let hatSitzung = false
   try {
     const { data, error } = await supabase.auth.signUp({ email, password })
+    // EC-3: an outage is not a rejected sign-up, and it must not count as an attempt.
+    if (istVerbindungsfehler(error)) return { error: VERBINDUNGSFEHLER }
     // A taken address, or a project that still asks for email confirmation, both end
     // up here without a session. Same neutral wording for both (EC-1).
-    if (error || !data.session) return { error: REGISTRIERUNG_FEHLGESCHLAGEN }
+    if (error || !data.session) {
+      recordCredentialFailure(keys)
+      return { error: REGISTRIERUNG_FEHLGESCHLAGEN }
+    }
+    clearCredentialFailures(keys)
     hatSitzung = true
   } catch {
-    // EC-3: the database or the network is unreachable.
     return { error: VERBINDUNGSFEHLER }
   }
 
@@ -96,6 +131,9 @@ export async function login(
   let angemeldet = false
   try {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    // EC-3: an unreachable backend is not a wrong password. Counting it would let an
+    // outage lock people out of their own accounts.
+    if (istVerbindungsfehler(error)) return { error: VERBINDUNGSFEHLER }
     if (error) {
       recordCredentialFailure(keys)
       return { error: ANMELDUNG_FEHLGESCHLAGEN }

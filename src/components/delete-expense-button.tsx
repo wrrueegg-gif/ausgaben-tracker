@@ -31,17 +31,27 @@ export function DeleteExpenseButton({
   beschreibung: string
 }) {
   const [offen, setOffen] = useState(false)
+  const [fehler, setFehler] = useState<string | null>(null)
   const [laeuft, starte] = useTransition()
 
   function loeschen(formData: FormData) {
     starte(async () => {
-      await deleteExpense(formData)
-      setOffen(false)
+      const ergebnis = await deleteExpense(formData)
+      // EC-2: a failure stays in the dialog as a readable sentence; only a success
+      // closes it.
+      if (ergebnis.error) setFehler(ergebnis.error)
+      else setOffen(false)
     })
   }
 
   return (
-    <AlertDialog open={offen} onOpenChange={setOffen}>
+    <AlertDialog
+      open={offen}
+      onOpenChange={(wert) => {
+        setOffen(wert)
+        if (!wert) setFehler(null)
+      }}
+    >
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"
@@ -60,6 +70,11 @@ export function DeleteExpenseButton({
             Monatssumme.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {fehler ? (
+          <p role="alert" className="text-destructive text-sm">
+            {fehler}
+          </p>
+        ) : null}
         <form action={loeschen}>
           <input type="hidden" name="id" value={id} />
           <AlertDialogFooter>

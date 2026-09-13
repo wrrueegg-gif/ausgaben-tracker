@@ -42,6 +42,9 @@ export default async function AppPage({
     .select(
       'id, amount_chf, category, spent_on, note, currency, amount_original, exchange_rate, rate_date'
     )
+    // Row level security already limits this to the caller; the explicit filter is
+    // the second of the two independent checks the design asks for.
+    .eq('user_id', user!.id)
     .gte('spent_on', monat.von)
     .lte('spent_on', monat.bis)
     .order('spent_on', { ascending: false })
@@ -90,9 +93,14 @@ export default async function AppPage({
         </CardContent>
       </Card>
 
-      <MonthSummary ausgaben={zeilen} monatsName={monat.name} />
-
-      <ExpenseList ausgaben={zeilen} />
+      {/* EC-2: on a failed load the warning stands alone — an empty list beside it
+          would claim there is nothing, which is a different statement. */}
+      {error ? null : (
+        <>
+          <MonthSummary ausgaben={zeilen} monatsName={monat.name} />
+          <ExpenseList ausgaben={zeilen} />
+        </>
+      )}
 
       <Card>
         <CardHeader>

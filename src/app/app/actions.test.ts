@@ -40,8 +40,11 @@ function form(werte: Record<string, string>): FormData {
   return data
 }
 
+const SUBMISSION = '11111111-2222-4333-8444-555555555555'
+
 const GUELTIG = {
   amount_original: '12.50',
+  submission_id: SUBMISSION,
   currency: 'CHF',
   category: 'Lebensmittel',
   spent_on: heuteIso(),
@@ -65,6 +68,7 @@ describe('createExpense', () => {
     expect(state.error).toBeUndefined()
     expect(insert).toHaveBeenCalledWith({
       user_id: 'u1',
+      submission_id: SUBMISSION,
       amount_chf: 12.5,
       amount_original: 12.5,
       currency: 'CHF',
@@ -103,6 +107,17 @@ describe('createExpense', () => {
 
     expect(state.error).toMatch(/konnte nicht gespeichert werden/)
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('EC-5: dieselbe Formularkennung ein zweites Mal erzeugt keine zweite Ausgabe', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    // 23505 is the unique-index violation: the row this submission wanted already exists.
+    insert.mockResolvedValue({ error: { code: '23505', message: 'duplicate key' } })
+
+    const state = await createExpense({}, form(GUELTIG))
+
+    expect(state.error).toBeUndefined()
+    expect(revalidatePath).toHaveBeenCalledWith('/app')
   })
 
   it('EC-2: fängt einen Netzwerkabbruch ab', async () => {
@@ -181,13 +196,16 @@ describe('createExpense mit Fremdwährung (PROJ-3)', () => {
 })
 
 describe('deleteExpense', () => {
+  const AUSGABE_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+
   it('AC-9, EC-3: löscht nur eine Zeile, die dieser Person gehört', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
 
-    await deleteExpense(form({ id: 'e1' }))
+    const ergebnis = await deleteExpense(form({ id: AUSGABE_ID }))
 
+    expect(ergebnis.error).toBeUndefined()
     expect(deleteChain.eqCalls).toEqual([
-      ['id', 'e1'],
+      ['id', AUSGABE_ID],
       ['user_id', 'u1'],
     ])
     expect(revalidatePath).toHaveBeenCalledWith('/app')
@@ -196,7 +214,19 @@ describe('deleteExpense', () => {
   it('AC-12: löscht nichts, wenn niemand angemeldet ist', async () => {
     getUser.mockResolvedValue({ data: { user: null } })
 
-    await expect(deleteExpense(form({ id: 'e1' }))).rejects.toThrow(/nicht angemeldet/)
+    const ergebnis = await deleteExpense(form({ id: AUSGABE_ID }))
+
+    expect(ergebnis.error).toMatch(/nicht angemeldet/)
+    expect(deleteChain.eqCalls).toEqual([])
+  })
+
+  it('weist eine missgebildete Kennung ab, bevor sie die Datenbank erreicht', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    for (const kennung of ['', 'abc', '123', 'aaaaaaaa-bbbb-4ccc-8ddd']) {
+      const ergebnis = await deleteExpense(form({ id: kennung }))
+      expect(ergebnis.error).toBeTruthy()
+    }
     expect(deleteChain.eqCalls).toEqual([])
   })
 
@@ -204,13 +234,18 @@ describe('deleteExpense', () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     deleteChain.result = { error: null }
 
-    await expect(deleteExpense(form({ id: 'schon-weg' }))).resolves.toBeUndefined()
+    const ergebnis = await deleteExpense(form({ id: AUSGABE_ID }))
+
+    expect(ergebnis.error).toBeUndefined()
   })
 
-  it('meldet einen echten Fehler der Datenbank', async () => {
+  it('EC-2: meldet einen Fehler der Datenbank, statt die Seite abstürzen zu lassen', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     deleteChain.result = { error: { message: 'connection refused' } }
 
-    await expect(deleteExpense(form({ id: 'e1' }))).rejects.toThrow(/konnte nicht gelöscht/)
+    const ergebnis = await deleteExpense(form({ id: AUSGABE_ID }))
+
+    expect(ergebnis.error).toMatch(/konnte nicht gelöscht/)
+    expect(revalidatePath).not.toHaveBeenCalled()
   })
 })

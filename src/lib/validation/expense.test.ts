@@ -10,6 +10,7 @@ function form(werte: Record<string, string>): FormData {
 
 const GUELTIG = {
   amount_original: '12.50',
+  submission_id: '11111111-2222-4333-8444-555555555555',
   currency: 'CHF',
   category: 'Lebensmittel',
   spent_on: heuteIso(),
@@ -63,6 +64,14 @@ describe('Eingabeprüfung einer Ausgabe (AC-3, AC-4, EC-4, EC-5)', () => {
       const ergebnis = parseExpense(form({ ...GUELTIG, currency: waehrung }))
       expect(ergebnis.ok).toBe(false)
       if (!ergebnis.ok) expect(ergebnis.fieldErrors.currency).toMatch(/CHF, EUR, USD oder GBP/)
+    }
+  })
+
+  it('EC-5 (PROJ-3): weist eine fehlende oder unsinnige Formularkennung ab', () => {
+    for (const kennung of ['', 'keine-uuid', '12345']) {
+      const ergebnis = parseExpense(form({ ...GUELTIG, submission_id: kennung }))
+      expect(ergebnis.ok).toBe(false)
+      if (!ergebnis.ok) expect(ergebnis.fieldErrors.submission_id).toBeTruthy()
     }
   })
 

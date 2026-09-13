@@ -45,6 +45,9 @@ export const expenseSchema = z.object({
     .transform((value) => Math.round(Number(value) * 100) / 100)
     .refine((value) => value > 0, 'Der Betrag muss grösser als 0 sein.')
     .refine((value) => value <= 9_999_999_999, 'Dieser Betrag ist zu gross.'),
+  // EC-5: identifies one submission of one form instance, so a repeated POST
+  // lands on the same row instead of creating a second one.
+  submission_id: z.uuid('Ungültige Formularkennung.'),
   currency: z.enum(WAEHRUNGEN, {
     message: 'Bitte wähle eine Währung: CHF, EUR, USD oder GBP.',
   }),
@@ -65,7 +68,10 @@ export const expenseSchema = z.object({
 export type ExpenseInput = z.infer<typeof expenseSchema>
 
 export type ExpenseFieldErrors = Partial<
-  Record<'amount_original' | 'currency' | 'category' | 'spent_on' | 'note', string>
+  Record<
+    'amount_original' | 'submission_id' | 'currency' | 'category' | 'spent_on' | 'note',
+    string
+  >
 >
 
 export function parseExpense(formData: FormData):
@@ -73,6 +79,7 @@ export function parseExpense(formData: FormData):
   | { ok: false; fieldErrors: ExpenseFieldErrors } {
   const result = expenseSchema.safeParse({
     amount_original: String(formData.get('amount_original') ?? ''),
+    submission_id: String(formData.get('submission_id') ?? ''),
     currency: String(formData.get('currency') ?? ''),
     category: String(formData.get('category') ?? ''),
     spent_on: String(formData.get('spent_on') ?? ''),
@@ -86,6 +93,7 @@ export function parseExpense(formData: FormData):
     const field = issue.path[0]
     if (
       (field === 'amount_original' ||
+        field === 'submission_id' ||
         field === 'currency' ||
         field === 'category' ||
         field === 'spent_on' ||

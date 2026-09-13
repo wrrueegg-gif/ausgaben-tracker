@@ -35,6 +35,9 @@ function Felder({
   heute: string
   fieldErrors: ExpenseFormState['fieldErrors']
 }) {
+  // New per mount, so a retry of the same submission carries the same key while a
+  // deliberate second expense (which remounts after a save) gets a fresh one.
+  const [submissionId] = useState(() => crypto.randomUUID())
   const [betrag, setBetrag] = useState('')
   const [waehrung, setWaehrung] = useState<string>('CHF')
   const [kategorie, setKategorie] = useState<string>(KATEGORIEN[0])
@@ -43,6 +46,7 @@ function Felder({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
+      <input type="hidden" name="submission_id" value={submissionId} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="amount_original">Betrag</Label>
         <div className="flex gap-2">
