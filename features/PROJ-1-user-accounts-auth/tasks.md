@@ -11,7 +11,7 @@
 - [x] T1  Migration: Tabelle `profiles` (id, display_name, created_at), Row Level Security aktiviert, Regeln „nur die eigene Zeile lesen und ändern", kein Einfügen/Löschen für angemeldete Personen  · files: supabase/migrations/0001_profiles_and_auth.sql  · → AC-8, AC-9
 - [x] T2  Migration im selben File: Auslöser auf der Kontotabelle, der beim Registrieren das Profil im selben Vorgang anlegt (Anzeigename aus dem Teil vor dem @), sowie die Funktion zum Löschen des eigenen Kontos, freigegeben nur für angemeldete Aufrufer  · files: supabase/migrations/0001_profiles_and_auth.sql  · → AC-8, AC-13, EC-6
 - [ ] T3 [user]  Supabase: E-Mail-Bestätigung ausschalten  · where: Dashboard → Authentication → Sign In / Providers → Email → „Confirm email" auf aus  · → AC-1
-- [ ] T4 [user]  Supabase: Mindestlänge des Passworts auf 8 setzen  · where: Dashboard → Authentication → Policies → „Minimum password length" = 8  · → AC-2
+- [ ] T4 [user]  Supabase: Mindestlänge des Passworts auf 8 setzen  · where: Dashboard → Authentication → Sign In / Providers → Email → „Minimum password length" = 8 (dasselbe Panel wie T3)  · → AC-2
 
 ## Stufe 2 — Server-Logik
 

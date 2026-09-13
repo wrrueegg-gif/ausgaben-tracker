@@ -40,8 +40,8 @@ Beide im Supabase-Dashboard des neuen Projekts:
 
 1. **Authentication → Sign In / Providers → Email → „Confirm email" ausschalten.**
    Der eingebaute Mailversand des kostenlosen Tarifs ist auf wenige Nachrichten pro Stunde begrenzt. Bleibt die Bestätigung eingeschaltet, scheitert die Registrierung reproduzierbar mit `over_email_send_rate_limit`, und niemand ist nach dem Registrieren angemeldet.
-2. **Authentication → Policies (Password) → „Minimum password length" auf 8 setzen.**
-   Die App prüft selbst auf 8 Zeichen; diese Einstellung zieht dieselbe Grenze eine Ebene tiefer.
+2. **Im selben Panel: „Minimum password length" auf 8 setzen.**
+   Die App prüft selbst auf 8 Zeichen; diese Einstellung zieht dieselbe Grenze eine Ebene tiefer. Beide Schalter liegen unter Authentication → Sign In / Providers → Email, nicht unter Authentication → Policies (dort stehen die Row-Level-Security-Regeln).
 
 Diese beiden Schritte sind in `features/PROJ-1-user-accounts-auth/tasks.md` als `[user]`-Aufgaben T3 und T4 dokumentiert — Einstellungen, die kein Code machen kann.
 

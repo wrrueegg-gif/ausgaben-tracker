@@ -115,7 +115,7 @@ Abgelehnt wird:
 | Einstellung | Wo | Wann | Wert | Warum | → AC |
 | --- | --- | --- | --- | --- | --- |
 | E-Mail-Bestätigung ausschalten | Supabase → Authentication → Sign In / Providers → Email → „Confirm email" | now | aus | Der Mailversand des kostenlosen Tarifs ist auf wenige Nachrichten pro Stunde begrenzt. Bleibt die Bestätigung an, ist niemand nach der Registrierung angemeldet und AC-1 ist nicht erfüllbar. | AC-1 |
-| Mindestlänge des Passworts auf 8 setzen | Supabase → Authentication → Policies (Password) → „Minimum password length" | now | 8 | Die Vorgabe der Plattform liegt bei 6. Die App prüft selbst auf 8 (AC-2); diese Einstellung zieht dieselbe Grenze eine Ebene tiefer, falls jemand an der App vorbei registriert. | AC-2 |
+| Mindestlänge des Passworts auf 8 setzen | Supabase → Authentication → Sign In / Providers → Email → „Minimum password length" (dasselbe Panel wie „Confirm email") | now | 8 | Die Vorgabe der Plattform liegt bei 6. Die App prüft selbst auf 8 (AC-2); diese Einstellung zieht dieselbe Grenze eine Ebene tiefer, falls jemand an der App vorbei registriert. | AC-2 |
 
 Die Grenzwerte unter *Authentication → Rate Limits* bleiben auf den Vorgaben — die Sperre, die AC-10 verlangt, wird in der App gezählt, weil nur dort pro Konto gezählt werden kann.
 
