@@ -35,13 +35,13 @@
 
 ## Stufe 5 — Monatsdiagramm (aus dem Refinement vom 13.09.2026)
 
-- [ ] T17  Farbtoken für die sechs Kategorien (hell und dunkel) sowie die Bildfolgen für Ring, Balken und die Regel für reduzierte Bewegung  · files: src/app/globals.css  · → AC-13, AC-14, AC-15
-- [ ] T18  Ringgeometrie als eigene Funktion: aus der Summe je Kategorie Abschnitte mit Anteil, Versatz und Farbnummer bilden, Rundungsdifferenz dem grössten Abschnitt zuschlagen  · files: src/lib/expense-summary.ts  · → AC-13, EC-7
-- [ ] T19 [P]  Ringdiagramm als Server-Komponente: ein Abschnitt je Kategorie, Aufbau über die Bildfolge, Gesamtsumme in der Mitte  · files: src/components/month-chart.tsx  · → AC-13, AC-14, EC-7
-- [ ] T20 [P]  Hochzählende Gesamtsumme als einzige Client-Komponente; bei reduzierter Bewegung sofort der Endwert  · files: src/components/animated-amount.tsx  · → AC-14, AC-15
-- [ ] T21 [P]  Leerzustand mit ruhiger Grafik statt leerer Fläche  · files: src/components/empty-month.tsx  · → AC-16
-- [ ] T22  Zusammenfassung setzt Ring, Aufstellung mit Farbpunkt und Balken sowie den Leerzustand zusammen  · files: src/components/month-summary.tsx  · → AC-13, AC-14, AC-16
-- [ ] T23 [P]  Tests der Ringgeometrie (Versatz summiert sich auf, Anteile ergeben genau 100, eine einzige Kategorie ergibt einen Abschnitt von 100, Farbe bleibt an der Kategorie)  · files: src/lib/expense-summary.test.ts  · → AC-13, EC-7
+- [x] T17  Farbtoken für die sechs Kategorien (hell und dunkel) sowie die Bildfolgen für Ring, Balken und die Regel für reduzierte Bewegung  · files: src/app/globals.css  · → AC-13, AC-14, AC-15
+- [x] T18  Ringgeometrie als eigene Funktion: aus der Summe je Kategorie Abschnitte mit Anteil, Versatz und Farbnummer bilden, Rundungsdifferenz dem grössten Abschnitt zuschlagen  · files: src/lib/expense-summary.ts  · → AC-13, EC-7
+- [x] T19 [P]  Ringdiagramm als Server-Komponente: ein Abschnitt je Kategorie, Aufbau über die Bildfolge, Gesamtsumme in der Mitte  · files: src/components/month-chart.tsx  · → AC-13, AC-14, EC-7
+- [x] T20 [P]  Hochzählende Gesamtsumme als einzige Client-Komponente; bei reduzierter Bewegung sofort der Endwert  · files: src/components/animated-amount.tsx  · → AC-14, AC-15
+- [x] T21 [P]  Leerzustand mit ruhiger Grafik statt leerer Fläche  · files: src/components/empty-month.tsx  · → AC-16
+- [x] T22  Zusammenfassung setzt Ring, Aufstellung mit Farbpunkt und Balken sowie den Leerzustand zusammen  · files: src/components/month-summary.tsx  · → AC-13, AC-14, AC-16
+- [x] T23 [P]  Tests der Ringgeometrie (Versatz summiert sich auf, Anteile ergeben genau 100, eine einzige Kategorie ergibt einen Abschnitt von 100, Farbe bleibt an der Kategorie)  · files: src/lib/expense-summary.test.ts  · → AC-13, EC-7
 
 ## Parallelisierung
 

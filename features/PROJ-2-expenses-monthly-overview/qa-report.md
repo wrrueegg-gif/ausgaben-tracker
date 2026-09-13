@@ -1,6 +1,6 @@
 # QA Test Results
 
-**Tested:** 2026-09-13
+**Tested:** 2026-09-13 (Erstlauf) · 2026-09-13, Nachtrag für AC-13 bis AC-16 und EC-7 aus dem Refinement
 **App URL:** http://localhost:3012 (Entwicklungsserver gegen die gehostete Supabase-Instanz)
 **Tester:** QA Engineer (AI) — Acceptance und Security durch einen unabhängigen Prüfer, der diesen Build nicht kannte; Laufzeitprüfungen mit angemeldeter Sitzung durch den Eigentümer dieses Laufs
 
@@ -60,6 +60,25 @@
 - [x] Mit dem öffentlichen Schlüssel ohne Sitzung: `POST /rest/v1/expenses` → `42501 new row violates row-level security policy` — Beleg: eigener `curl`
 - [x] Tests „AC-12: speichert nichts, wenn niemand angemeldet ist" und „AC-12: löscht nichts, wenn niemand angemeldet ist"
 
+#### AC-13: Ringdiagramm mit denselben Farben wie die Aufstellung
+- [x] Im Browser mit vier Kategorien geprüft: Der Ring zeigt vier Abschnitte, und die ausgelesenen Farbwerte sind **identisch** mit denen der Punkte in der Aufstellung — `rgb(41,118,163)`, `rgb(36,137,125)`, `rgb(118,78,188)`, `rgb(214,107,31)` in beiden Listen, in derselben Reihenfolge
+- [x] Die Anteile summieren sich auf genau 100 (67.8 + 19.6 + 8.4 + 4.2), und jeder Abschnitt beginnt dort, wo der vorige endet (Versatz 0, −67.8, −87.4, −95.8) — Beleg: im Browser aus den gerenderten Elementen ausgelesen
+- [x] Die Farbe hängt an der Kategorie, nicht an der Rangfolge — Test „AC-13: Farbe hängt an der Kategorie, nicht an der Rangfolge"
+- [x] Tests der Geometrie: Summe genau 100, lückenlose Versätze, Reihenfolge wie in der Aufstellung
+
+#### AC-14: Einmaliger Aufbau, nach höchstens einer Sekunde fertig
+- [x] Im Browser ausgelesen: Die Ringabschnitte tragen die Bildfolge `ring-wachsen` mit einer Dauer von `0.9s`, die Balken laufen über `balken-wachsen` ein — beides unter der geforderten Sekunde
+- [x] Die Gesamtsumme zählt hoch — Test „AC-14: sonst startet der Aufbau" prüft, dass der Bildablauf angefordert wird
+- [x] Die Bewegung läuft einmal und nicht in Schleife — Beleg: `animation-iteration-count` der Bildfolgen ist der Vorgabewert 1; einzig der Ring des Leerzustands wiederholt sich bewusst
+
+#### AC-15: Keine Bewegung bei „Bewegung reduzieren"
+- [x] Die Regel steht im ausgelieferten Stylesheet und setzt für alle vier bewegten Klassen `animation: none !important` sowie den Endzustand (`stroke-dasharray`, `transform: none`, `opacity: 1`) — Beleg: Medienregel im Browser aus den geladenen Stilvorlagen ausgelesen
+- [x] Der JavaScript-Teil hält sich daran: Bei reduzierter Bewegung steht der Endwert sofort da und es wird **kein** Bildablauf angefordert — Test „AC-15: bei reduzierter Bewegung steht der Endwert sofort da und nichts läuft"; die Gegenprobe (Abfrage entfernt) lässt genau diesen Test fehlschlagen
+
+#### AC-16: Leerer Monat zeigt eine ruhige Grafik
+- [x] Im Browser geprüft: Ein Monat ohne Ausgaben zeigt den gestrichelten, langsam kreisenden Ring mit Pluszeichen, darunter „CHF 0.00" und den Hinweis, die erste Ausgabe einzutragen — Beleg: Bildschirmaufnahme direkt nach der Registrierung
+- [x] Die Gesamtsumme bleibt 0.00 CHF — Beleg: derselbe Bildschirm; Test „AC-16: ein leerer Monat hat keine Abschnitte"
+
 ### Edge Cases Status
 
 #### EC-1: Doppelklick auf Speichern
@@ -89,6 +108,10 @@
 #### EC-6: Bereits gelöschte Ausgabe
 - [x] Das Löschen ist idempotent: getroffen werden null Zeilen, es folgt keine Fehlermeldung — Beleg: Test „EC-6: bleibt fehlerfrei, wenn die Zeile bereits gelöscht war"; bestätigt durch EC-3, wo ein `DELETE` ohne Treffer mit 204 endete
 
+#### EC-7: Alle Ausgaben in einer einzigen Kategorie
+- [x] Ein einziger Abschnitt mit Anteil 100 und Versatz 0 — damit schliesst der Ring bauartbedingt, und eine Nahtstelle mit doppelter Linie kann es nicht geben, weil kein zweiter Abschnitt existiert — Beleg: Test „EC-7: eine einzige Kategorie ergibt einen geschlossenen Ring"
+- [x] Die Abschnitte stossen stumpf aneinander (`stroke-linecap="butt"`), überlappen sich also auch bei mehreren Kategorien nicht — Beleg: `src/components/month-chart.tsx`
+
 ### Security Audit Results
 
 - [x] Authentifizierung: `curl -i /app` → 307 auf `/login`, `POST /app` → 307, `/api/export` → 401
@@ -109,6 +132,8 @@
 - [!] Darstellung in Firefox und Safari — geprüft wurde ein Chromium-Browser
 - [!] Echtes Renn-Timing zweier gleichzeitiger Speichervorgänge — nicht provoziert; die Garantie (Formularkennung mit eindeutigem Index) wurde stattdessen direkt in der Datenbank geprüft
 - [x] Responsive bei 375 px, 768 px und 1440 px — geprüft, kein waagrechter Seitenbildlauf auf keiner Breite
+- [x] Nachtrag: Das Diagramm bei 375 px geprüft — Ring und Aufstellung stapeln sich, kein waagrechter Seitenbildlauf (`document.documentElement.scrollWidth === window.innerWidth`)
+- [x] Nachtrag: Heller und dunkler Modus geprüft — die sechs Kategoriefarben sind in beiden unterscheidbar. Dabei fiel auf, dass der dunkle Modus überhaupt nicht griff; siehe BUG-7
 
 ### Bugs Found
 
@@ -165,10 +190,20 @@
   3. Tatsächlich: Datenbankfehler `22P02`, geworfen und mangels Fehlergrenze bis zur Absturzseite durchgereicht
 - **Priority:** **Behoben in diesem Lauf.** Die Kennung wird gegen das UUID-Format geprüft, bevor sie die Datenbank erreicht; ein eigener Test deckt vier missgebildete Formen ab.
 
+#### BUG-7: Der dunkle Modus war nie aktiv
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Im Betriebssystem den dunklen Modus einschalten
+  2. Die App öffnen
+  3. Erwartet: dunkle Darstellung, wie `docs/design-system.md` sie beschreibt („die App folgt der Systemeinstellung")
+  4. Tatsächlich: unverändert hell — die dunklen Token hängen an der Klasse `.dark`, die nirgends gesetzt wird
+- **Wirkung:** Sämtliche dunklen Farbwerte waren tote Werte, die neuen Diagrammfarben für Dunkel eingeschlossen.
+- **Priority:** **Behoben in diesem Lauf.** Dieselben Token gelten jetzt zusätzlich über `prefers-color-scheme`; die Klasse bleibt für einen späteren Umschalter bestehen. Im Browser in beiden Modi nachgeprüft.
+
 ### Summary
-- **Acceptance Criteria:** 12 von 12 bestanden
-- **Edge Cases:** 6 von 6 bestanden
-- **Bugs Found:** 6 (0 kritisch, 1 hoch, 3 mittel, 2 niedrig) — alle in diesem Lauf behoben und nachgeprüft
+- **Acceptance Criteria:** 16 von 16 bestanden (AC-13 bis AC-16 aus dem Refinement)
+- **Edge Cases:** 7 von 7 bestanden
+- **Bugs Found:** 7 (0 kritisch, 1 hoch, 3 mittel, 3 niedrig) — alle behoben und nachgeprüft
 - **Security:** 6 von 7 Prüfungen belegt, 1 `[!] NOT VERIFIED` (Ratenbegrenzung auf Anlegen und Löschen, für ein MVP optional)
 - **Production Ready:** **YES** — keine offenen kritischen oder hohen Fehler
 - **Recommendation:** Freigeben. Die nicht geprüften Punkte sind benannt und keiner davon blockiert.
