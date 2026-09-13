@@ -21,9 +21,14 @@
 |   +-- Knopf „Ausgabe speichern" (während des Speicherns gesperrt)
 |   +-- Feldfehler unter dem jeweiligen Feld
 +-- Monatszusammenfassung (Karte)
-|   +-- Gesamtsumme des Monats, gross, mit Währung
-|   +-- Liste „Summe je Kategorie", absteigend nach Betrag
-|       +-- je Zeile: Kategoriename, Betrag, Anteil in Prozent
+|   +-- Ringdiagramm (links, bei schmalem Fenster oben)
+|   |   +-- ein Abschnitt je Kategorie, Länge = Anteil, Farbe = Kategoriefarbe
+|   |   +-- in der Mitte die Gesamtsumme, hochzählend
+|   +-- Liste „Summe je Kategorie", absteigend nach Betrag (rechts bzw. darunter)
+|       +-- je Zeile: Farbpunkt, Kategoriename, Balken (Länge = Anteil),
+|           Betrag, Anteil in Prozent
+|   +-- Leerzustand: ruhige Grafik (gestrichelter, langsam drehender Ring mit
+|       Pluszeichen) statt leerer Fläche, darunter ein Satz
 +-- Ausgabenliste (Karte)
 |   +-- je Zeile: Datum · Kategorie · Notiz · Betrag · Löschknopf
 |   +-- Löschknopf öffnet Bestätigungsdialog
@@ -106,9 +111,39 @@ Abgelehnt wird:
 
 **Garantie hinter EC-6 (schon gelöscht):** Das Löschen ist idempotent. Gelöscht wird über „Zeile mit dieser Kennung, die dieser Person gehört"; trifft das auf nichts zu, ist das Ergebnis dasselbe wie beim Löschen selbst — die Zeile ist weg. Es gibt deshalb keine Fehlermeldung über einen bereits verschwundenen Eintrag.
 
+## Das Ringdiagramm
+
+```
+Geometrie — als eigene, testbare Funktion, nicht in der Komponente:
+
+Aus der bereits berechneten Summe je Kategorie entsteht je Kategorie ein
+Abschnitt mit
+- anteil   — Länge des Abschnitts, in Prozent des Rings
+- versatz  — wo der Abschnitt beginnt, in Prozent, aufsteigend summiert
+- farbe    — die Nummer des Farbtokens (1 bis 6), fest je Kategorie
+
+Gezeichnet wird ein Kreis mit einem Umfang von genau 100 Einheiten. Ein
+Abschnitt ist dann schlicht „anteil von 100" — die Prozentzahl ist die
+Zeichenvorschrift, es braucht keine Winkelrechnung.
+
+EC-7: Fällt alles in eine Kategorie, ist der einzige Abschnitt 100 von 100.
+Damit entsteht ein geschlossener Ring; eine Nahtstelle mit doppelter Linie
+kann es nicht geben, weil kein zweiter Abschnitt existiert.
+
+Rundung: Die Anteile werden so verteilt, dass ihre Summe exakt 100 ergibt —
+der grösste Abschnitt trägt die Rundungsdifferenz. Sonst bliebe bei drei
+gleich grossen Kategorien ein Spalt von einem Prozent im Ring stehen.
+```
+
+**Farben je Kategorie liegen fest**, nicht nach Reihenfolge. Sonst wechselte die Farbe einer Kategorie, sobald sich die Rangfolge ändert — und genau daran erkennt man sie wieder. Sechs Farbtoken, je einmal für hell und dunkel definiert, im selben Token-System wie der Rest.
+
+**Der Aufbau ist reines CSS, ohne JavaScript.** Ring und Balken wachsen über eine Bildfolge (`@keyframes`) aus dem Nichts auf ihren Endwert; die Werte stehen als Zahlen im Markup und werden nicht im Browser berechnet. Damit sind Diagramm und Aufstellung serverseitig gerendert und stimmen bauartbedingt überein. Einzig die hochzählende Gesamtsumme braucht JavaScript und ist deshalb die einzige Client-Komponente.
+
+**Reduzierte Bewegung schaltet alles ab (AC-15).** Eine einzige Regel (`@media (prefers-reduced-motion: reduce)`) setzt die Dauer aller Bildfolgen auf null und lässt die Gesamtsumme sofort ihren Endwert zeigen. Nicht „kürzer", sondern aus — wer das einstellt, meint es.
+
 ## Abhängigkeiten
 
-- Keine neuen Pakete. `zod` prüft die Eingaben, `@supabase/ssr` liegt bereits vor.
+- Keine neuen Pakete. Insbesondere **keine Diagrammbibliothek**: Ein Ring aus sechs Abschnitten ist ein Kreis mit einer gestrichelten Linie, und das kann SVG von sich aus. `zod` prüft die Eingaben, `@supabase/ssr` liegt bereits vor.
 - Aus dem bestehenden shadcn/ui-Bestand kommen hinzu: `select` (Kategorie), `table` (Ausgabenliste), `skeleton` (Ladezustand) — alle bereits installiert. `button`, `input`, `label`, `card`, `alert`, `alert-dialog` werden wie in PROJ-1 verwendet.
 - Die Datums- und Währungsformatierung übernimmt die eingebaute Internationalisierung des Browsers und der Laufzeitumgebung (`de-CH`), kein Datums- oder Währungspaket.
 
@@ -127,6 +162,11 @@ keine — dieses Feature braucht keine Einstellung im Dashboard.
 | Monat als Parameter in der Adresszeile, Server rendert neu | Verlinkbar, der Zurück-Knopf funktioniert, und es gibt keinen Zustand im Browser, der vom Server abweichen kann. | Monatswechsel nur im Browserzustand | Jeder Monatswechsel ist eine Serveranfrage. Bei dieser Datenmenge nicht spürbar. | 2026-09-13 |
 | Zugriff erneut zweifach: Prüfung im Server **und** Zeilenregel in der Datenbank | Dasselbe Muster, das PROJ-1 etabliert hat. Die Zeilenregel ist die belastbare Grenze und deckt AC-11, AC-12 und EC-3 gemeinsam ab. | Nur Prüfung im Server | Zwei Stellen, die zueinander passen müssen. Dafür bleibt ein Fehler im Anwendungscode folgenlos für fremde Daten. | 2026-09-13 |
 | Keine Eindeutigkeitsregel gegen doppelte Ausgaben | Zwei gleiche Beträge am selben Tag in derselben Kategorie sind ein normaler Fall. Gegen den Doppelklick hilft die Sperre am Knopf, nicht eine Regel, die echte Doppelausgaben verhindert. | Eindeutigkeit über (Person, Datum, Betrag, Kategorie) | Ein sehr schneller Doppelklick, der die Sperre überholt, könnte zwei Zeilen erzeugen. Die Person sieht beide und löscht eine. | 2026-09-13 |
+| Ringdiagramm als handgeschriebenes SVG statt mit einer Diagrammbibliothek | Ein Ring ist ein Kreis mit `stroke-dasharray` — dafür eine Bibliothek zu laden, wäre mehr Code im Browser als das ganze Feature. Ausserdem bleiben die Farben, die Zugänglichkeit und das Verhalten bei reduzierter Bewegung vollständig in unserer Hand. | Recharts oder eine ähnliche Bibliothek | Wir schreiben die Geometrie selbst und müssen sie testen. Dafür kommt kein einziges Byte hinzu, und es gibt keinen zweiten Gestaltungsstil im Produkt. | 2026-09-13 |
+| Aufbau als CSS-Bildfolge, nicht als JavaScript-Animation | Das Diagramm bleibt damit eine Server-Komponente: Die Zahlen kommen fertig aus dem Server, der Browser bewegt nur noch Pixel. Eine JavaScript-Animation hätte dieselben Zahlen ein zweites Mal berechnet — die klassische Quelle für ein Diagramm, das nicht zur Liste passt. | Animation im Browser über eine Bibliothek oder eigene Berechnung | Feine Steuerung (etwa Bewegung anhalten und fortsetzen) ist so nicht möglich. Brauchen wir nicht. | 2026-09-13 |
+| Farben fest je Kategorie, nicht nach Rangfolge | Eine Kategorie behält ihre Farbe, auch wenn sie im nächsten Monat an anderer Stelle steht. Genau daran erkennt man sie ohne zu lesen. | Farbe nach Position in der sortierten Liste | Bei nur einer Kategorie im Monat wird eine Farbe „übersprungen". Belanglos gegen den Wiedererkennungswert. | 2026-09-13 |
+| Rundungsdifferenz trägt der grösste Abschnitt | Drei Kategorien zu je 33 % ergäben 99 % und einen sichtbaren Spalt im Ring. Die Differenz dem grössten Abschnitt zuzuschlagen ist dort am wenigsten sichtbar. | Spalt stehen lassen oder alle Abschnitte proportional strecken | Ein Abschnitt weicht um bis zu zwei Prozentpunkte von seiner angezeigten Prozentzahl ab. Die Zahl daneben bleibt die genaue; der Ring ist die Übersicht. | 2026-09-13 |
+| Nur die Gesamtsumme zählt hoch, sonst keine Client-Komponente | Der hochzählende Betrag ist der einzige Teil, der ohne JavaScript nicht geht. Alles andere bleibt serverseitig gerendert. | Auch Ring und Balken im Browser animieren | Ohne JavaScript steht die Summe sofort da statt hochzuzählen — was genau das richtige Verhalten ist. | 2026-09-13 |
 | Löschen idempotent statt mit Fehlermeldung | „Weg" ist das Ergebnis, das die Person wollte; ob die Zeile schon vorher weg war, ist für sie belanglos (EC-6). | Fehlermeldung „Eintrag existiert nicht mehr" | Ein echter Fehlschlag beim Löschen fiele weniger auf. Dagegen steht, dass die Liste nach dem Neuladen die Wahrheit zeigt. | 2026-09-13 |
 
 ## Offene Fragen
