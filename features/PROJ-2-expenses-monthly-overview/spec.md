@@ -19,7 +19,8 @@
 - Eigene Kategorien anlegen, umbenennen oder löschen. Die Liste ist fest.
 - Budgets, Limits, Warnungen, Sparziele.
 - Wiederkehrende Ausgaben und Vorlagen.
-- Auswertung über mehrere Monate hinweg (Jahresübersicht, Diagramme, Vergleich zum Vormonat).
+- Auswertung über mehrere Monate hinweg (Jahresübersicht, Vergleich zum Vormonat). Das Ringdiagramm aus AC-13 zeigt ausschliesslich den betrachteten Monat.
+- Ein Diagramm über den zeitlichen Verlauf innerhalb des Monats (Tageskurve). Die Frage, die dieses Produkt beantwortet, ist „wohin", nicht „wann".
 - Belege oder Fotos an eine Ausgabe hängen.
 - Fremdwährungen — das ist PROJ-3. In diesem Feature wird ausschliesslich in CHF erfasst.
 - CSV-Export. Der vollständige JSON-Export aus PROJ-1 (AC-12) deckt die Datenauskunft bereits ab.
@@ -38,6 +39,10 @@
 - [ ] **AC-10** — Angenommen eine Person hat in einem Monat keine Ausgaben, wenn sie diesen Monat betrachtet, dann sieht sie einen Hinweis, dass noch nichts erfasst ist, und eine Gesamtsumme von 0.00 CHF statt einer leeren Fläche
 - [ ] **AC-11** — Angenommen zwei Personen sind gleichzeitig angemeldet, wenn beide ihre Übersicht öffnen, dann sieht jede ausschliesslich ihre eigenen Ausgaben — auch dann, wenn jemand die Datenbank mit dem öffentlichen Schlüssel direkt abfragt
 - [ ] **AC-12** — Angenommen eine Person ist nicht angemeldet, wenn sie versucht, eine Ausgabe anzulegen oder zu löschen, dann wird der Versuch abgewiesen und nichts wird gespeichert oder entfernt
+- [ ] **AC-13** — Angenommen ein Monat enthält Ausgaben, wenn die Übersicht geladen ist, dann zeigt ein Ringdiagramm die Anteile der Kategorien, und jeder Abschnitt trägt dieselbe Farbe wie die zugehörige Zeile in der Aufstellung darunter
+- [ ] **AC-14** — Angenommen die Übersicht wird geladen, wenn Ring, Balken und Gesamtsumme erscheinen, dann bauen sie sich einmalig auf — der Ring wächst, die Balken laufen von links ein, die Gesamtsumme zählt hoch — und der Endzustand ist nach höchstens einer Sekunde erreicht
+- [ ] **AC-15** — Angenommen im Betriebssystem ist „Bewegung reduzieren" eingeschaltet, wenn die Übersicht geladen wird, dann erscheint alles sofort im Endzustand und nichts bewegt sich
+- [ ] **AC-16** — Angenommen ein Monat enthält keine Ausgaben, wenn die Übersicht geladen ist, dann zeigt der Leerzustand eine ruhige Grafik statt einer leeren Fläche, und die Gesamtsumme bleibt 0.00 CHF
 
 ## Edge Cases
 - **EC-1** — Angenommen die Person klickt zweimal schnell hintereinander auf „Speichern", wenn beide Klicks abgeschickt werden, dann entsteht nur eine Ausgabe und der Knopf ist während des Speicherns gesperrt
@@ -46,6 +51,7 @@
 - **EC-4** — Angenommen die Person gibt einen Betrag mit mehr als zwei Nachkommastellen ein, wenn sie speichert, dann wird auf zwei Nachkommastellen gerundet und der gespeicherte Wert ist der, der angezeigt wird
 - **EC-5** — Angenommen die Person wählt ein Datum in der Zukunft, wenn sie speichert, dann wird nicht gespeichert und eine Meldung sagt, dass nur vergangene und heutige Daten möglich sind
 - **EC-6** — Angenommen eine Ausgabe wurde in einem anderen Browserfenster bereits gelöscht, wenn die Person sie hier ebenfalls löscht, dann bleibt es bei einer gelöschten Ausgabe und es erscheint keine Fehlermeldung über einen bereits verschwundenen Eintrag
+- **EC-7** — Angenommen alle Ausgaben eines Monats fallen in eine einzige Kategorie, wenn das Ringdiagramm gezeichnet wird, dann bildet es einen geschlossenen Ring ohne Lücke und ohne doppelte Linie an der Nahtstelle
 
 ## Technical Requirements (optional)
 - Beträge werden exakt gespeichert, nicht als Fliesskommazahl mit Rundungsfehlern — eine Summe über 30 Ausgaben muss auf den Rappen stimmen.
@@ -67,4 +73,6 @@
 | Löschen nur mit Rückfrage | Löschen ist unumkehrbar, und die Liste ist klickdicht. Eine Rückfrage kostet eine Sekunde und verhindert den ärgerlichsten Fehler. | 2026-09-13 |
 | Notiz auf 200 Zeichen begrenzt | Die Notiz soll erinnern („Znüni mit Team"), nicht dokumentieren. Eine Grenze hält zugleich die Liste lesbar. | 2026-09-13 |
 | Alle Beträge in CHF; Fremdwährung ist ein eigenes Feature | Single Responsibility: Dieses Feature ist ohne Fremdwährung vollständig testbar und nutzbar. PROJ-3 erweitert es. | 2026-09-13 |
+| Die Monatsübersicht bekommt ein Ringdiagramm und einen belebten Leerzustand (AC-13 bis AC-16, EC-7) | Rückmeldung aus der Nutzung: Der geschützte Bereich wirkte leer und die Zahlen standen als blosse Textzeilen da. Ein Ring beantwortet die eigentliche Frage — „wohin fliesst das Geld" — auf einen Blick, während die Zahlen daneben stehen bleiben. Der Aufbau ist einmalig und kurz; wer Bewegung ausgeschaltet hat, sieht sofort den Endzustand. | 2026-09-13 |
+| Keine neue Zahl, keine neue Auswertung — nur eine zweite Darstellung derselben Summen | Das Diagramm liest genau die Werte, die AC-6 bereits berechnet. So kann es nicht von der Aufstellung abweichen, und die bestehenden Kriterien bleiben unberührt. | 2026-09-13 |
 | Keine Datenschutzprüfung mit eigenen Kriterien nötig | Dieses Feature führt keine neue Art personenbezogener Daten ein: Die Ausgaben gehören zum bestehenden Konto, Auskunft und Löschung sind bereits über AC-12 und AC-13 aus PROJ-1 abgedeckt. Die Notiz ist ein Freitextfeld und wird in `docs/privacy.md` entsprechend behandelt. | 2026-09-13 |
