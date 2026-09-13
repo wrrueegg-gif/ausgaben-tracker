@@ -22,7 +22,7 @@
 
 | ID | Feature | Description | Status | Spec | Created |
 |----|---------|-------------|--------|------|---------|
-| PROJ-1 | Benutzerkonto & Login | Registrierung und Anmeldung mit E-Mail und Passwort; nur angemeldete Nutzer sehen den geschützten Bereich, und jeder sieht ausschliesslich seine eigenen Daten. | Architected | [PROJ-1-user-accounts-auth/](PROJ-1-user-accounts-auth/) | 2026-09-13 |
+| PROJ-1 | Benutzerkonto & Login | Registrierung und Anmeldung mit E-Mail und Passwort; nur angemeldete Nutzer sehen den geschützten Bereich, und jeder sieht ausschliesslich seine eigenen Daten. | Tasked | [PROJ-1-user-accounts-auth/](PROJ-1-user-accounts-auth/) | 2026-09-13 |
 | PROJ-2 | Ausgaben & Monatsübersicht | Ausgaben mit Betrag, Kategorie und Datum erfassen, löschen und pro Monat als Summe je Kategorie auswerten. | Roadmap | — | 2026-09-13 |
 | PROJ-3 | Fremdwährung & Wechselkurse | Ausgaben in EUR, USD oder GBP erfassen; die App rechnet sie über die EZB-Referenzkurse der Frankfurter-API zum Ausgabedatum in CHF um und speichert den Kurs nachvollziehbar mit. | Roadmap | — | 2026-09-13 |
 
