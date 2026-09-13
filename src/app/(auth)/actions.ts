@@ -30,6 +30,12 @@ const REGISTRIERUNG_FEHLGESCHLAGEN =
   'Registrierung fehlgeschlagen. Bitte prüfe deine Eingaben — falls du bereits ein Konto hast, melde dich an.'
 const VERBINDUNGSFEHLER =
   'Die Anmeldung ist gerade nicht erreichbar. Bitte versuche es in einem Moment erneut.'
+// Not a product state but a setup mistake, and one that otherwise looks exactly like
+// a broken sign-up. It says nothing about the address: with "Confirm email" switched
+// on, a new and an already registered address come back identically (a user, no
+// session), so this wording cannot reveal which of the two it was (EC-1).
+const BESTAETIGUNG_NOCH_AKTIV =
+  'Das Konto wurde angelegt, aber in Supabase ist „Confirm email" noch eingeschaltet — deshalb bist du nicht angemeldet. Schalte es unter Authentication → Sign In / Providers → Email aus (siehe README, Schritt 2) und registriere dich erneut.'
 
 async function clientIp(): Promise<string> {
   const headerList = await headers()
@@ -88,8 +94,19 @@ export async function signup(
     const { data, error } = await supabase.auth.signUp({ email, password })
     // EC-3: an outage is not a rejected sign-up, and it must not count as an attempt.
     if (istVerbindungsfehler(error)) return { error: VERBINDUNGSFEHLER }
-    // A taken address, or a project that still asks for email confirmation, both end
-    // up here without a session. Same neutral wording for both (EC-1).
+    // Two shapes, one cause. Either the platform answers with a user and no session,
+    // or its mailer is rate-limited because it is trying to send a confirmation at
+    // all — on the free tier that is a handful of messages per hour. Both mean the
+    // same switch is still on, and neither says anything about the address.
+    const bestaetigungAktiv =
+      (!error && data.user && !data.session) ||
+      (error as { code?: string } | null)?.code === 'over_email_send_rate_limit'
+
+    if (bestaetigungAktiv) {
+      recordCredentialFailure(keys)
+      return { error: BESTAETIGUNG_NOCH_AKTIV }
+    }
+    // Everything else — a taken address above all — keeps the one neutral wording (EC-1).
     if (error || !data.session) {
       recordCredentialFailure(keys)
       return { error: REGISTRIERUNG_FEHLGESCHLAGEN }

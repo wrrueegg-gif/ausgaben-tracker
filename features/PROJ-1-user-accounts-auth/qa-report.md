@@ -128,6 +128,7 @@ Für die Laufzeitprüfungen wurden zwei Testkonten (`qa.anna@gmail.com`, `qa.bru
   3. Erwartet: sofort angemeldet auf `/app` (AC-1)
   4. Tatsächlich: „Registrierung fehlgeschlagen …"; der Mailversand des kostenlosen Tarifs antwortet zusätzlich mit `429 over_email_send_rate_limit`
 - **Priority:** Vor der Abnahme zu beheben — **nicht durch Code behebbar.** Es ist die offene `[user]`-Aufgabe T3: Supabase → Authentication → Sign In / Providers → Email → „Confirm email" ausschalten. Im README als Schritt 2 für jede Person dokumentiert, die das Projekt aufsetzt.
+- **Nachtrag in diesem Lauf:** Die App benennt die Ursache jetzt selbst, statt eine allgemeine Fehlermeldung zu zeigen — geprüft gegen die laufende Instanz, die Registrierung antwortet mit „Das Konto wurde angelegt, aber in Supabase ist ‚Confirm email' noch eingeschaltet … (siehe README, Schritt 2)". Der Hinweis erscheint für eine neue und eine bereits vergebene Adresse wortgleich und verrät deshalb weiterhin nichts (EC-1); zwei Tests decken beide Antwortformen der Plattform ab, einschliesslich des limitierten Mailversands.
 
 #### BUG-2: Mindestlänge des Passworts in der Plattform noch auf 6
 - **Severity:** High (offene `[user]`-Aufgabe auf einem Anmeldepfad)

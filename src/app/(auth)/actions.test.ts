@@ -176,6 +176,43 @@ describe('signup', () => {
     expect(ziel).toBe('/app')
   })
 
+  it('nennt die Ursache, wenn in Supabase die E-Mail-Bestätigung noch eingeschaltet ist', async () => {
+    // Kein Fehler, ein Nutzer, aber keine Sitzung — das gibt es nur in dieser einen
+    // Konstellation, und dann ist der Hinweis auf die Einstellung die einzige nützliche Antwort.
+    signUp.mockResolvedValue({ data: { user: { id: 'u1' }, session: null }, error: null })
+
+    const state = await signup({}, form('neu@b.ch', 'geheim1234'))
+
+    expect(state.error).toMatch(/Confirm email/)
+    expect(state.error).toMatch(/README/)
+  })
+
+  it('nennt dieselbe Ursache, wenn der Mailversand des kostenlosen Tarifs limitiert', async () => {
+    // Das Limit tritt nur auf, weil überhaupt eine Bestätigungsmail verschickt werden
+    // soll — also dieselbe Einstellung, dieselbe Antwort.
+    signUp.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { code: 'over_email_send_rate_limit', message: 'email rate limit exceeded' },
+    })
+
+    const state = await signup({}, form('neu@b.ch', 'geheim1234'))
+
+    expect(state.error).toMatch(/Confirm email/)
+  })
+
+  it('EC-1: der Hinweis verrät nicht, ob die Adresse schon vergeben ist', async () => {
+    // Bei eingeschalteter Bestätigung antwortet die Plattform für eine neue und eine
+    // bereits vergebene Adresse gleich; beide müssen also dieselbe Meldung erhalten.
+    signUp.mockResolvedValue({ data: { user: { id: 'u1', identities: [] }, session: null }, error: null })
+    const vergeben = await signup({}, form('schon@b.ch', 'geheim1234'))
+
+    resetCredentialFailures()
+    signUp.mockResolvedValue({ data: { user: { id: 'u2', identities: [{ id: 'i1' }] }, session: null }, error: null })
+    const neu = await signup({}, form('neu@b.ch', 'geheim1234'))
+
+    expect(vergeben.error).toBe(neu.error)
+  })
+
   it('EC-1: antwortet bei bereits vergebener Adresse neutral', async () => {
     signUp.mockResolvedValue({ data: { session: null }, error: { message: 'User already registered' } })
 
