@@ -1,72 +1,72 @@
-# Privacy Record — what this product does with personal data
+# Datenschutz-Register — was dieses Produkt mit personenbezogenen Daten tut
 
-> The honest overview of which personal data this product processes, why, and for how long.
+> Die ehrliche Übersicht darüber, welche personenbezogenen Daten dieses Produkt verarbeitet, wozu und wie lange.
 >
-> - Created and kept current by `/dsgvo`, one entry per processing purpose.
-> - Grows with the product: when a feature changes what is stored, its entry changes too.
-> - **Altitude:** purposes, legal bases, retention, and who else sees the data. Field-level detail lives in `docs/data-model.md` and the feature designs.
+> - Erstellt und aktuell gehalten von `/dsgvo`, ein Eintrag je Verarbeitungszweck.
+> - Wächst mit dem Produkt: Ändert ein Feature, was gespeichert wird, ändert sich sein Eintrag mit.
+> - **Flughöhe:** Zwecke, Rechtsgrundlagen, Aufbewahrung und wer die Daten sonst noch sieht. Felddetails stehen in `docs/data-model.md` und in den Feature-Designs.
 >
-> This maps closely onto the record of processing activities (*Verarbeitungsverzeichnis*, Art. 30 GDPR; Art. 12 Swiss DSG) — but it is an engineering document, not a legal filing. A lawyer or your data protection officer / advisor has the final word on whether it is complete for your situation.
+> Dies entspricht weitgehend dem Verzeichnis von Verarbeitungstätigkeiten (Art. 30 DSGVO; Art. 12 DSG) — es ist aber ein technisches Dokument, keine juristische Eingabe. Ob es für die konkrete Situation vollständig ist, beantwortet eine Anwältin oder ein Datenschutzberater, nicht dieses Werkzeug.
 
-**Applicable law:** _GDPR (EU/DE) · DSG (CH) · both — from `.ai-eng-kit` → `law`; the rules are in `docs/law/`_
-**Data protection stance:** _lean | standard | strict — set in `docs/PRD.md` → Constraints_
-**Controller (Verantwortlicher):** _your company / your name and address — the legal entity behind the product_
-**Last reviewed:** _YYYY-MM-DD_
+**Anwendbares Recht:** DSGVO (EU/DE) · DSG (CH) — beide, aus `.ai-eng-kit` → `law`; die Regeln stehen in `docs/law/`
+**Datenschutz-Haltung:** lean (`docs/PRD.md` → Constraints)
+**Verantwortlicher:** _offen — vor einem echten Betrieb einzutragen. Das Produkt läuft derzeit als Prüfungsprojekt lokal, ohne echte Nutzer._
+**Zuletzt geprüft:** 2026-09-13
 
 ---
 
-## Processing activities
+## Verarbeitungstätigkeiten
 
-_One row per purpose, not per table. "Run user accounts" is a purpose; "the profiles table" is not._
+| Zweck | Daten | Von wem | Warum zulässig | Aufbewahrung | Beteiligte Auftragsverarbeiter |
+|-------|-------|---------|----------------|--------------|-------------------------------|
+| Benutzerkonten betreiben (Registrierung, Anmeldung, geschützter Bereich) | E-Mail-Adresse, Passwort-Hash, Anzeigename, Zeitpunkt der Registrierung und der Anmeldungen, IP-Adresse der Anmeldung | registrierte Personen | DSGVO: Art. 6 Abs. 1 lit. b — ohne Konto gibt es die Leistung nicht · DSG: erwarteter Zweck, keine Rechtfertigung nötig | bis zur Löschung des Kontos durch die Person (AC-13) | Supabase (Region Frankfurt, `eu-central-1`) |
+| Ausgaben speichern und auswerten | Betrag, Währung, Kategorie, Datum, freie Notiz, Wechselkurs und Kursdatum — je Person | registrierte Personen | DSGVO: Art. 6 Abs. 1 lit. b · DSG: erwarteter Zweck | bis zur Löschung der einzelnen Ausgabe oder des Kontos | Supabase (Frankfurt) |
+| Missbrauch der Anmeldung abwehren | E-Mail-Adresse und IP-Adresse fehlgeschlagener Anmeldeversuche, nur im Arbeitsspeicher des Servers | jede Person, die sich anzumelden versucht | DSGVO: Art. 6 Abs. 1 lit. f — berechtigtes Interesse an der Abwehr automatisierten Passwortratens · DSG: erwarteter Zweck | 15 Minuten, danach automatisch verworfen; kein Eintrag in der Datenbank | keine |
+| Wechselkurse abrufen | **keine** — an die Frankfurter-API gehen ausschliesslich Währungskürzel und ein Datum, nie ein Betrag, nie eine Kennung der Person | — | keine Verarbeitung personenbezogener Daten | entfällt | Frankfurter-API (siehe unten) |
 
-| Purpose | Data | Whose | Why it is lawful | Retention | Processors involved |
-|---------|------|-------|------------------|-----------|---------------------|
-| _Run user accounts_ | _Email, password hash, display name_ | _Registered users_ | _GDPR: Art. 6(1)(b) contract · DSG: expected purpose, no justification needed_ | _Until account deletion_ | _Supabase (EU)_ |
-| _..._ | _..._ | _..._ | _..._ | _..._ | _..._ |
+Die freie Notiz an einer Ausgabe ist ein Freitextfeld. Menschen schreiben dort erfahrungsgemäss auch Persönliches hinein („Medikamente", „Geschenk für X"). Es wird wie personenbezogener Inhalt behandelt: nur für die eigene Person sichtbar, mit dem Konto löschbar, im Export enthalten.
 
-## Sensitive data
+## Besondere Kategorien personenbezogener Daten
 
-_Health, biometrics, genetics, ethnicity, political opinion, religion, trade union membership, sex life or orientation, criminal matters — and, under the Swiss DSG, social-assistance measures and administrative proceedings (Art. 9 GDPR · Art. 5 lit. c DSG). These carry much stricter rules — usually explicit consent. List them separately so nobody overlooks them, or write "none"._
+- keine — das Produkt fragt nichts ab, was unter Art. 9 DSGVO oder Art. 5 lit. c DSG fällt. Dass jemand in eine Notiz etwas Gesundheitsbezogenes schreiben *kann*, macht das Feld nicht zu einem Gesundheitsdatenfeld; es gibt keine Auswertung und keine Weitergabe.
 
-- _none_
+## Auftragsverarbeiter
 
-## Processors (Auftragsverarbeiter · Auftragsbearbeiter)
+| Dienst | Was er verarbeitet | Region | AVV geschlossen | Ausserhalb der angemessenen Länder? |
+|--------|--------------------|--------|-----------------|-------------------------------------|
+| Supabase | sämtliche Anwendungsdaten (Konten, Profile, Ausgaben) | `eu-central-1` (Frankfurt) | ☐ offen — vor echtem Betrieb in den Organisationseinstellungen zu akzeptieren | US-Unternehmen, Hosting in der EU |
+| Frankfurter-API (frankfurter.dev, EZB-Referenzkurse) | keine personenbezogenen Daten — nur Währungskürzel und Datum, serverseitig aufgerufen; die IP-Adresse der Nutzerin erreicht den Dienst nie | EU | nicht erforderlich, da keine Auftragsverarbeitung personenbezogener Daten | nein |
 
-_Every external service that touches personal data on your behalf (Art. 28 GDPR · Art. 9 DSG). Each needs a data processing agreement (AVV / DPA) — normally a checkbox or a downloadable document in the provider's dashboard. Under the DSG the countries you export to also have to be named in the privacy policy._
+Es gibt kein Analyse-Werkzeug, kein Fehler-Tracking, keine Werbe- oder Marketingdienste und keine Cookies ausser dem technisch notwendigen Sitzungs-Cookie der Anmeldung. Damit stellt sich die Einwilligungsfrage (Art. 25 TDDDG, Art. 45c FMG) nicht.
 
-| Service | What it processes | Region | DPA signed | Outside the adequate countries? |
-|---------|-------------------|--------|------------------|----------------|
-| _Supabase_ | _All application data_ | _eu-central-1 (Frankfurt)_ | _☐_ | _US company, EU hosting_ |
-| _Vercel_ | _Requests, logs_ | _..._ | _☐_ | _..._ |
-| _Sentry_ | _Error reports (scrubbed)_ | _..._ | _☐_ | _..._ |
+## Betroffenenrechte — wie sie bedient werden
 
-## Data subject rights — how they are served
+| Recht | DSGVO | DSG | Wie dieses Produkt es erfüllt |
+|-------|-------|-----|-------------------------------|
+| Auskunft / Kopie | Art. 15 | Art. 25 | Knopf „Meine Daten herunterladen" im geschützten Bereich, liefert sofort eine JSON-Datei (AC-12) |
+| Berichtigung | Art. 16 | Art. 32 | Ausgaben können gelöscht und neu erfasst werden (PROJ-2). Die E-Mail-Adresse ist in dieser Version nicht änderbar — siehe offene Punkte |
+| Löschung | Art. 17 | Art. 32 / Art. 6 Abs. 4 | Knopf „Konto löschen" mit Rückfrage; entfernt Konto, Profil und alle Ausgaben sofort und endgültig (AC-13) |
+| Datenübertragbarkeit | Art. 20 | Art. 28 | dieselbe JSON-Datei wie bei der Auskunft, maschinenlesbar (AC-12) |
+| Widerspruch | Art. 21 | Art. 30 Abs. 2 | Es gibt keine Verarbeitung auf berechtigtem Interesse ausser der Missbrauchsabwehr bei der Anmeldung; wer das Konto löscht, beendet jede Verarbeitung |
 
-_Which part of the app actually delivers each right. "By email, manually" is a valid answer for a small product; leaving it blank is not._
+> Frist: **ein Kalendermonat** nach DSGVO (Art. 12 Abs. 3), **30 Tage** nach DSG (Art. 25 Abs. 7). Beide Rechte werden hier sofort und selbstbedient erfüllt, also deutlich innerhalb der Frist.
 
-| Right | GDPR | DSG | How this product delivers it |
-|-------|------|-----|------------------------------|
-| Access / copy | Art. 15 | Art. 25 | _..._ |
-| Rectification | Art. 16 | Art. 32 | _..._ |
-| Erasure | Art. 17 | Art. 32 / Art. 6 Abs. 4 | _..._ |
-| Portability | Art. 20 | Art. 28 (narrower) | _..._ |
-| Objection | Art. 21 | Art. 30 Abs. 2 | _..._ |
+## Offene Punkte
 
-> Deadline: **one calendar month** under the GDPR (Art. 12(3), extendable by two for complex cases if the person is told within the first), **30 days** under the DSG (Art. 25 Abs. 7).
+- [ ] Verantwortlicher (Name, Adresse, Kontakt) ist nicht eingetragen — vor einem Betrieb mit echten Nutzern nachzuholen.
+- [ ] Der AVV mit Supabase ist nicht geschlossen (Organisationseinstellungen → Legal Documents). Für den Prüfungsbetrieb ohne echte Nutzerdaten nicht relevant, für den Echtbetrieb Pflicht.
+- [ ] Die E-Mail-Adresse ist nicht änderbar; eine Berichtigung nach Art. 16 wäre derzeit nur über Löschen und Neuanlegen möglich.
+- [ ] Ein Impressum (DDG) bzw. die Anbieterkennzeichnung nach UWG fehlt — erst vor einer Veröffentlichung nötig.
 
-## Open points
+## Für eine Anwältin / einen Datenschutzberater
 
-_What is still unresolved, and who resolves it. `/dsgvo` adds items here; they leave when they are actually done._
+- Das Produkt richtet sich an Privatpersonen in der Schweiz, wird aber auf einer EU-Region betrieben und soll auch in der EU nutzbar sein. Wir behandeln deshalb DSGVO und DSG parallel und wenden jeweils die strengere Anforderung an. Ist diese Doppelbetrachtung für den geplanten Markt so ausreichend?
+- Reicht die Selbstbedienung (Sofort-Export, Sofort-Löschung) als Erfüllung der Auskunfts- und Löschpflichten, oder braucht es zusätzlich einen benannten Kontaktweg für Betroffenenanfragen?
 
-- [ ] _e.g. AVV with Sentry not yet signed_
-- [ ] _e.g. Retention period for uploaded files never decided_
+## Schwellenwert Datenschutz-Folgenabschätzung
 
-## For a lawyer / data protection officer or advisor
-
-_Questions that need a human. Keep the context with each question so it can be asked without re-explaining the product._
-
-- _e.g. Our free tier keeps analytics data for 24 months on legitimate interest — is that defensible for a B2C product with no login requirement?_
+Keine der Voraussetzungen ist erfüllt: keine besonderen Kategorien, keine systematische Überwachung, keine automatisierte Bewertung oder Profilbildung, kein grosser Massstab. Eine Datenschutz-Folgenabschätzung ist nach heutigem Stand nicht erforderlich. Das ist eine Einschätzung, keine Zusicherung.
 
 ---
 
-_Run `/dsgvo` to create the first version of this record, and again whenever a feature changes what personal data the product holds._
+_Dieses Register ist keine Rechtsberatung und bescheinigt keine Konformität._
