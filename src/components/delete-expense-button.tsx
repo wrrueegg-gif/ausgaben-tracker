@@ -1,15 +1,18 @@
 'use client'
 
 // AC-9 — deleting asks once, because the list is click-dense and deletion is final.
-// The form lives inside the dialog: the dialog content is rendered in a portal, so a
-// button in it could not reach a form that stayed behind in the table row.
+//
+// The dialog is controlled and only closes once the deletion has actually run.
+// The obvious version — a submit button inside AlertDialogAction — looks right and
+// silently does nothing: Radix closes the dialog on click, which unmounts the form
+// in the portal before React can dispatch the action. Found while verifying the
+// build against the real app.
 
-import { useFormStatus } from 'react-dom'
+import { useState, useTransition } from 'react'
 
 import { deleteExpense } from '@/app/app/actions'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -20,15 +23,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 
-function ConfirmButton() {
-  const { pending } = useFormStatus()
-  return (
-    <AlertDialogAction type="submit" disabled={pending}>
-      {pending ? 'Wird gelöscht …' : 'Löschen'}
-    </AlertDialogAction>
-  )
-}
-
 export function DeleteExpenseButton({
   id,
   beschreibung,
@@ -36,8 +30,18 @@ export function DeleteExpenseButton({
   id: string
   beschreibung: string
 }) {
+  const [offen, setOffen] = useState(false)
+  const [laeuft, starte] = useTransition()
+
+  function loeschen(formData: FormData) {
+    starte(async () => {
+      await deleteExpense(formData)
+      setOffen(false)
+    })
+  }
+
   return (
-    <AlertDialog>
+    <AlertDialog open={offen} onOpenChange={setOffen}>
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"
@@ -56,14 +60,16 @@ export function DeleteExpenseButton({
             Monatssumme.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          {/* AC-9: cancelling leaves everything as it was. */}
-          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-          <form action={deleteExpense}>
-            <input type="hidden" name="id" value={id} />
-            <ConfirmButton />
-          </form>
-        </AlertDialogFooter>
+        <form action={loeschen}>
+          <input type="hidden" name="id" value={id} />
+          <AlertDialogFooter>
+            {/* AC-9: cancelling leaves everything as it was. */}
+            <AlertDialogCancel disabled={laeuft}>Abbrechen</AlertDialogCancel>
+            <Button type="submit" disabled={laeuft}>
+              {laeuft ? 'Wird gelöscht …' : 'Löschen'}
+            </Button>
+          </AlertDialogFooter>
+        </form>
       </AlertDialogContent>
     </AlertDialog>
   )

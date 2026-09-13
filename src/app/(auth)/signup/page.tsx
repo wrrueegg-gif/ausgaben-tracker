@@ -3,7 +3,7 @@
 // Sign-up page — AC-1, AC-2, AC-14, EC-1, EC-2, EC-5.
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import { signup, type AuthFormState } from '../actions'
@@ -32,6 +32,11 @@ function SubmitButton() {
 
 export default function SignupPage() {
   const [state, formAction] = useActionState<AuthFormState, FormData>(signup, {})
+  // Controlled on purpose: React empties an uncontrolled form after every action,
+  // including a failed one, which would make the person retype everything (EC-3).
+  // Keeping the values on the client also means the server never echoes a password back.
+  const [email, setEmail] = useState('')
+  const [passwort, setPasswort] = useState('')
 
   return (
     <Card>
@@ -57,6 +62,8 @@ export default function SignupPage() {
               type="email"
               autoComplete="email"
               required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="du@beispiel.ch"
               aria-describedby={state.fieldErrors?.email ? 'email-fehler' : undefined}
             />
@@ -75,6 +82,8 @@ export default function SignupPage() {
               type="password"
               autoComplete="new-password"
               required
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
               minLength={MIN_PASSWORT_LAENGE}
               aria-describedby={
                 state.fieldErrors?.password ? 'passwort-fehler' : 'passwort-hinweis'

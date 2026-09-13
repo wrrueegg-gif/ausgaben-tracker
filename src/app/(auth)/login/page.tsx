@@ -5,7 +5,7 @@
 // and never in the URL.
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import { login, type AuthFormState } from '../actions'
@@ -33,6 +33,11 @@ function SubmitButton() {
 
 export default function LoginPage() {
   const [state, formAction] = useActionState<AuthFormState, FormData>(login, {})
+  // Controlled on purpose: React empties an uncontrolled form after every action,
+  // including a failed one, which would make the person retype everything (EC-3).
+  // Keeping the values on the client also means the server never echoes a password back.
+  const [email, setEmail] = useState('')
+  const [passwort, setPasswort] = useState('')
 
   return (
     <Card>
@@ -58,6 +63,8 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="du@beispiel.ch"
             />
           </div>
@@ -70,6 +77,8 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
             />
           </div>
 
