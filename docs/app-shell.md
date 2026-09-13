@@ -17,6 +17,7 @@ Owner: **PROJ-1 — Benutzerkonto & Login.** Dieses Produkt ist ein Zwei-Seiten-
 | Anmelden (`/login`) | Mit E-Mail und Passwort anmelden | abgemeldete Personen | PROJ-1 |
 | Registrieren (`/signup`) | Ein Konto anlegen | abgemeldete Personen | PROJ-1 |
 | Übersicht (`/app`) | Ausgaben erfassen, Liste und Monatsauswertung ansehen | angemeldete Personen | PROJ-2 |
+| Datenschutz (`/datenschutz`) | Nachlesen, welche Daten zu welchem Zweck gespeichert werden | alle, auch abgemeldet | PROJ-1 |
 
 Es gibt keine Navigationsleiste mit mehreren Zielen: Angemeldet existiert genau ein Bereich. Zwischen Anmelden und Registrieren wird über einen Textlink am Formularende gewechselt.
 
