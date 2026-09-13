@@ -1,254 +1,126 @@
-# AI Engineering Kit
+# Ausgaben-Tracker
 
-> A spec-driven workflow for [Claude Code](https://docs.anthropic.com/en/docs/claude-code): turn an idea into a production-ready web app, one feature at a time — Requirements → Architecture → Tasks → Build → QA → Deploy.
+Ein kleines SaaS-Produkt, mit dem eine Privatperson ihre täglichen Ausgaben erfasst und am Monatsende sieht, wofür das Geld geflossen ist. Bezahlt jemand in Euro, Dollar oder Pfund, holt die App den offiziellen Referenzkurs der Europäischen Zentralbank **zum Ausgabedatum** und speichert ihn nachvollziehbar bei der Ausgabe.
 
-This project was created with `npx create-ai-eng-app`. It ships a complete Next.js stack plus a set of Claude Code **Skills**, **Rules**, and **Sub-Agents** that drive each phase of the work. You steer; the skills do the heavy lifting and keep everything traceable.
+Entstanden als Abschlussarbeit, entwickelt **ausschliesslich** mit dem spec-getriebenen Workflow des AI Engineering Kits: `/init → /write-spec → /architecture → /tasks → /build → /qa`, ein Durchgang je Feature.
 
-**The AI Engineering Kit is the exclusive framework of the AI Engineering Accelerator** — Alex Sprogis' program that takes you from vibe-coder to AI engineer: shipping SaaS applications that are production-ready, secure, and good enough to sell.
+## Die drei Features
 
----
+| ID | Feature | Was es leistet |
+|----|---------|----------------|
+| PROJ-1 | Benutzerkonto & Login | Registrierung und Anmeldung mit E-Mail und Passwort über Supabase Auth. Nur angemeldete Personen sehen `/app`. Row Level Security auf `profiles`, Profil entsteht automatisch per Datenbank-Trigger. Sperre nach 5 Fehlversuchen in 15 Minuten, keine Auskunft darüber, ob ein Konto existiert. Datenexport als JSON und Kontolöschung durch die Person selbst. |
+| PROJ-2 | Ausgaben & Monatsübersicht | Ausgaben mit Betrag, Kategorie, Datum und Notiz erfassen und löschen. Monatsübersicht mit Gesamtsumme und Summe je Kategorie, Blättern durch die Monate. Row Level Security auf `expenses`: jede Person sieht ausschliesslich ihre eigenen Zeilen. |
+| PROJ-3 | Fremdwährung & Wechselkurse | **Die externe Integration.** Ausgaben in EUR, USD oder GBP werden über die [Frankfurter-API](https://frankfurter.dev) (Referenzkurse der EZB) in CHF umgerechnet. Kurs und Kursdatum werden bei der Ausgabe festgeschrieben. Ein Kursfeld über dem Formular zeigt die aktuellen Kurse. |
 
-## Quick Start
+Die Artefakte jedes Features liegen in `features/PROJ-X-…/` als `spec.md`, `design.md`, `tasks.md` und `qa-report.md`. Der Status steht in [`features/INDEX.md`](features/INDEX.md).
 
-The scaffolder already ran `npm install` and a setup check. Open this project in the coding agent you installed it for — `.ai-eng-kit` → `agents` says which — and:
+## Die externe Integration braucht nichts
 
-```
-/verify-setup     Confirm the stack is wired and finish anything missing
-/init             Define your product and a prioritized feature map
-```
+`https://api.frankfurter.dev` ist kostenlos, öffentlich und verlangt **keinen Schlüssel und kein Konto**. Es gibt also nichts einzurichten und nichts zu bezahlen. Der Aufruf erfolgt ausschliesslich serverseitig; an den Dienst gehen nur ein Währungskürzel und ein Datum, nie ein Betrag und nichts, was auf eine Person schliessen lässt.
 
-> **Codex writes these differently:** `$verify-setup`, `$init` — or pick them from the `/skills` menu.
-> Every other agent uses `/`. Unsure? Run `/help` (or `$help`); it prints the syntax for this project.
-
-`/init` runs a **discovery interview**, one question at a time (always with a recommended answer you confirm or correct), then writes your **PRD** (`docs/PRD.md`) and a prioritized **feature map** (`features/INDEX.md`). From there you build feature by feature.
+Selbst nachsehen:
 
 ```bash
-npm run dev       # Start the dev server → http://localhost:3000
+curl "https://api.frankfurter.dev/v1/2026-09-13?base=EUR&symbols=CHF"
 ```
 
----
+Die Antwort nennt das Datum des Kurses. Für einen Sonntag ist das der letzte Börsentag davor — genau dieses Datum zeigt die App an.
 
-## The Workflow
+## Selbst zum Laufen bringen
 
-Development runs in phases, each driven by a skill. Handoffs are always user-initiated — a skill suggests the next step, you run it when ready.
+Voraussetzung: Node 20 oder neuer und ein kostenloses Supabase-Konto.
 
-```
-/init  →  /write-spec  →  /architecture  →  /tasks  →  /build  →  /qa  →  /deploy
+### 1. Supabase-Projekt anlegen
 
-         /refine PROJ-X   revisit any spec, anytime
-         /e2e-tests        after /qa, lock in critical user journeys (optional)
-         /help             where am I, what's next?
-```
+Auf [supabase.com](https://supabase.com) ein neues Projekt erstellen, Free Plan, **Region Frankfurt (`eu-central-1`)**. Die Region lässt sich später nicht mehr ändern.
 
-| Skill | Command | What it does |
-|-------|---------|--------------|
-| Setup Check | `/verify-setup` | Verifies the stack, auto-fixes what's safe, reports what needs you (e.g. Supabase keys) |
-| Codebase Map | `/map` | For a project that already exists: writes what it is built with, how it is put together, its weak spots and a proposed feature map to `docs/codebase/` — evidence with file paths, read by `/init` |
-| Reverse Spec | `/reverse-spec` | For a feature that already runs: reads the criteria off the code, you confirm them block by block, `/qa` then verifies — the regression net a grown project is missing |
-| Refactor | `/refactor` | Splits one oversized, mixed-responsibility file into modules behind an unchanged facade — only where verified specs can prove behaviour survived |
-| Project Initializer | `/init` | One-time setup: creates the PRD + feature map via the discovery interview |
-| Feature Spec Writer | `/write-spec` | Writes a full spec for one feature (user stories, acceptance criteria, edge cases) |
-| Spec Refiner | `/refine PROJ-X` | Reopens an existing spec to improve, extend, or challenge it |
-| Solution Architect | `/architecture` | Designs a PM-friendly technical approach (decisions, no code) |
-| Task Planner | `/tasks` | Breaks the design into an ordered, leveled, parallelizable task list |
-| Builder | `/build` | Implements the feature end to end — schema, API, UI — working through `tasks.md` |
-| QA Engineer | `/qa` | Tests against acceptance criteria, writes unit tests, re-runs the build's integration tests as regression, runs a security audit |
-| E2E Test Engineer | `/e2e-tests` | Optional: Playwright tests for the few critical journeys that must never break |
-| DevOps | `/deploy` | Deploys to your host (Vercel or Hostinger) with production-ready checks and database promotion |
-| Help | `/help` | Context-aware guide: shows where you are and what to do next |
-| Audit | `/audit` | Anytime drift check: confirms INDEX, specs, the AC→Task→Test chain, and code all still match |
-| Security Check | `/security-check` | Non-destructive check of the live app: HTTPS, security headers, protected routes, no exposed secrets, Supabase RLS |
+### 2. Zwei Einstellungen setzen — ohne sie funktioniert die Registrierung nicht
 
----
+Beide im Supabase-Dashboard des neuen Projekts:
 
-## Spec-Driven Core
+1. **Authentication → Sign In / Providers → Email → „Confirm email" ausschalten.**
+   Der eingebaute Mailversand des kostenlosen Tarifs ist auf wenige Nachrichten pro Stunde begrenzt. Bleibt die Bestätigung eingeschaltet, scheitert die Registrierung reproduzierbar mit `over_email_send_rate_limit`, und niemand ist nach dem Registrieren angemeldet.
+2. **Authentication → Policies (Password) → „Minimum password length" auf 8 setzen.**
+   Die App prüft selbst auf 8 Zeichen; diese Einstellung zieht dieselbe Grenze eine Ebene tiefer.
 
-Every feature lives in its own folder `features/PROJ-X-name/`:
+Diese beiden Schritte sind in `features/PROJ-1-user-accounts-auth/tasks.md` als `[user]`-Aufgaben T3 und T4 dokumentiert — Einstellungen, die kein Code machen kann.
 
-| File | Created by | Role |
-|------|-----------|------|
-| `spec.md` | `/write-spec` | The **contract** — WHAT the feature does. Read-only during `/build`. |
-| `design.md` | `/architecture` | The **technical design** — HOW it's built. |
-| `tasks.md` | `/tasks` | The **ordered build plan**, with file-disjoint `[P]` tasks for parallel work. |
-| `qa-report.md` | `/qa` | The **test report**, keyed by acceptance-criterion ID. |
+### 3. Datenbankschema anlegen
 
-**AC-IDs are the traceability backbone.** Every acceptance criterion in `spec.md` gets a stable ID (`AC-1`, `AC-2`, …; edge cases `EC-1`, …). Tasks reference the AC-IDs they fulfill, and `qa-report.md` reports per AC-ID — chaining **AC → Task → Test**.
-
-**Native parallel build.** `/build` works `tasks.md` level by level. Within a level, file-disjoint `[P]` tasks fan out to parallel sub-agents (each isolated in its own git worktree); the main agent then integrates, verifies against the level's AC-IDs, and advances. No special tool or keyword — it runs in any Claude Code session.
-
----
-
-## Test vs. Live Data (Supabase)
-
-So you never develop against real user data, `/init` asks how you want to separate environments and records the choice in `docs/PRD.md` → Constraints. Every later skill reads it from there.
-
-| Strategy | What it means | Cost |
-|----------|---------------|------|
-| **local** *(recommended, default)* | Supabase runs on your machine via **Docker** while you build; the schema is migrated to a hosted live project at `/deploy`. Needs Docker + the Supabase CLI. | Free |
-| **two-projects** | A separate hosted **dev** project to test in and a **prod** project for real users. No Docker needed. | Free tier covers both |
-| **single** | One hosted Supabase project — test and live are the same. Simplest, but no safety net. | Free |
-| **branching** | One Pro project with an always-on **staging** branch, promoted to live with a Merge. | Supabase Pro (~$35/mo) |
-
-`.env.local` always holds your **test** keys (local Docker instance / dev project / staging branch / the single project) — never live keys. Schema changes are captured as `supabase/migrations/*.sql` and promoted to production during `/deploy` (`supabase db push` for `local`). For `branching`, `/deploy` previews the schema diff in plain language and flags anything destructive before you Merge.
-
-Building frontend-only (no backend)? `/init` records "localStorage only" and skips all of the above.
-
----
-
-## Feature Tracking
-
-All features are tracked in `features/INDEX.md`. Each row links to the feature **folder**:
-
-| ID | Feature | Status | Spec |
-|----|---------|--------|------|
-| PROJ-1 | User Login | Deployed | [Folder](features/PROJ-1-user-login/) |
-| PROJ-2 | Dashboard | In Progress | [Folder](features/PROJ-2-dashboard/) |
-
-Status flow: **Roadmap → Planned → Architected → Tasked → In Progress → In Review → Approved → Deployed**. Every skill reads this file at start and updates it when done, preventing duplicate work.
-
----
-
-## Tech Stack
-
-| Category | Tool | Why |
-|----------|------|-----|
-| **Framework** | Next.js 16 (App Router) | React + Server Components |
-| **Language** | TypeScript | Type safety |
-| **Styling** | Tailwind CSS | Utility-first CSS |
-| **UI Library** | shadcn/ui | Copy-paste, customizable components |
-| **Backend** | Supabase (optional) | PostgreSQL + Auth + Storage |
-| **Deployment** | Vercel or Hostinger | GitHub-connected auto-deploy |
-| **Validation** | Zod + react-hook-form | Runtime validation |
-| **Testing** | Vitest + Playwright | Unit/integration + E2E |
-
----
-
-## Project Structure
+Im Dashboard unter **SQL Editor** die vier Dateien aus `supabase/migrations/` **in dieser Reihenfolge** einfügen und ausführen:
 
 ```
-.
-├── CLAUDE.md / AGENTS.md           Auto-loaded project context (map + managed block)
-│                                   Exactly one of them carries content — see below
-├── .claude/                        (Claude Code; other agents use their own folder)
-│   ├── settings.json               Permissions (committed)
-│   ├── rules/                      Auto-applied rules
-│   │   ├── general.md                  Git workflow, feature tracking, status updates
-│   │   └── security.md                 Secrets, headers, auth
-│   ├── skills/                     Invocable workflows (/command) — one folder per skill:
-│   │   │                           verify-setup, init, write-spec, refine, architecture, tasks,
-│   │   │                           build, qa, e2e-tests, deploy, security-check, dsgvo, audit,
-│   │   │                           cleanup, help, map, reverse-spec, refactor, starter-kit-migration
-│   │   └── <skill>/SKILL.md
-│   └── agents/
-│       └── qa-engineer.md          Sub-agent config (model, tools, limits)
-├── features/                       One folder per feature
-│   ├── INDEX.md                        Status tracking
-│   ├── README.md                       Feature-folder format
-│   └── PROJ-X-name/                    spec.md · design.md · tasks.md · qa-report.md
-├── docs/
-│   ├── PRD.md                       Product Requirements Document
-│   ├── data-model.md                App-wide data model (entities + relationships)
-│   ├── app-shell.md                 Navigation, layout regions, page pattern
-│   ├── privacy.md                   What personal data the product processes (kept by /dsgvo)
-│   ├── tech-debt.md                 Internal work with a status (fed by /map, worked by /refactor)
-│   ├── production/                  Topic guides: error tracking, headers, rate limiting, performance
-│   ├── stacks/                      Stack packs — the concrete procedures for this project's stack
-│   └── law/                         Law packs — GDPR, Swiss DSG, EU AI Act (read by /dsgvo)
-├── supabase/                       Created by `supabase init` in /init when the backend is Supabase
-│   └── migrations/                  Schema changes as .sql files
-├── tests/                          Playwright E2E tests (added by /e2e-tests)
-├── src/
-│   ├── app/                        Pages (Next.js App Router)
-│   ├── components/ui/              shadcn/ui components (never recreate these)
-│   ├── hooks/                      Custom React hooks
-│   └── lib/                        Utilities (supabase/server.ts + client.ts, utils.ts)
-└── public/                         Static files
+0001_profiles_and_auth.sql
+0002_lock_down_trigger_function.sql
+0003_expenses.sql
+0004_expenses_currency.sql
 ```
 
----
+Wer die Supabase CLI hat, kann stattdessen `supabase link --project-ref <ref>` und `supabase db push` verwenden.
 
-## How It Works Under the Hood
+### 4. Schlüssel eintragen
 
-- **Skills** are structured workflows your agent discovers automatically. Most run inline (live interview / oversight); `/build` forks isolated sub-agents for parallel tasks, and `/qa` hands verification to `qa-engineer` sub-agents that have never seen the build. Where your agent has no sub-agents, `/build` works sequentially and `/qa` asks for a fresh session instead — the verifier must not know how the feature was built.
-- **Rules** are the project-wide standards — workflow discipline, git conventions, working language, security. They are loaded in every session, so they apply to every skill without anyone loading them by hand.
-- **The memory file** is auto-loaded every session with the tech stack, conventions, and pointers to the PRD and feature index.
+`.env.local.example` nach `.env.local` kopieren und die beiden Werte aus **Project Settings → API** eintragen:
 
-**Where those live depends on your agent** — same content, each in the place that agent reads:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<der publishable bzw. anon key>
+```
 
-| agent | skills | rules |
-|---|---|---|
-| Claude Code | `.claude/skills/` | `.claude/rules/` |
-| Codex | `.codex/skills/` | inside the memory file |
-| Cursor | `.cursor/skills/` | `.cursor/rules/*.mdc` |
-| GitHub Copilot | `.github/skills/` | `.github/instructions/*.instructions.md` |
-| Antigravity | `.agents/skills/` | `.agents/rules/` |
-| Grok Build | `.grok/skills/` | inside the memory file |
-| Kimi Code | `.kimi-code/skills/` | inside the memory file — skills are called `/skill:build` |
+Der Schlüssel ist öffentlich und gehört ins Browser-Bundle — geschützt sind die Daten durch Row Level Security, nicht durch Geheimhaltung dieses Schlüssels. `.env.local` ist von Git ausgeschlossen.
 
-**One file carries your project's context.** In a Claude-Code-only project that is `CLAUDE.md`; with any other agent it is `AGENTS.md`, and the remaining memory files are generated pointers to it. Edit the one with content — the pointers are overwritten on every update.
-
-**One thing is not the same everywhere.** `.claude/settings.json` (Claude Code) and `.grok/config.toml` (Grok Build) *block* reading `.env*` files and force-pushing. Only those two enforce it. With the other agents — Kimi Code included, whose permission rules live in your user config, not in the project — the same rules are instructions your agent follows — real, but not a wall it cannot cross.
-
-### Recommended (optional): live API docs
-
-Memorized API knowledge goes stale. Connecting a live-docs MCP server like **[Context7](https://github.com/upstash/context7)** lets `/architecture` and `/build` pull the *current* API surface of libraries (Supabase, Stripe, Next.js, …) instead of relying on memory — fewer outdated-API bugs. It's entirely optional: every skill works without it and never blocks if it's absent. To enable it, add Context7 as an MCP server in your Claude Code settings.
-
-- **State lives in files, not memory.** Every skill re-reads `features/INDEX.md` and the relevant feature folder at start — nothing is lost after a new session or context compaction.
-- **Context is layered.** `CLAUDE.md` + rules (always) → `SKILL.md` (when invoked) → feature spec (on demand) → `docs/production/` (only when referenced).
-- **Context is isolated.** Heavy work runs in forked sub-agents with their own context window, so noise from one task doesn't pollute another.
-- **Always read, never guess.** A global rule enforces reading a file before modifying it and verifying paths/APIs by reading — preventing hallucinated code references.
-
----
-
-## Scripts
+### 5. Starten
 
 ```bash
-npm run dev          # Development server (localhost:3000)
-npm run build        # Production build
-npm run start        # Production server
-npm run lint         # ESLint
-npm test             # Vitest: unit + integration tests
-npm run test:e2e     # Playwright: E2E tests (added by /e2e-tests)
-npm run test:all     # Both test suites
+npm install
+npm run dev
 ```
 
-> Playwright browsers are **not** installed during setup. The first `/e2e-tests` run installs the browser binary (~300 MB) once — keeping everyday setup fast.
+Die App läuft auf http://localhost:3000.
 
----
+## In fünf Minuten durchprobieren
 
-## Production Guides
+1. **Registrieren** unter `/signup` mit einer E-Mail-Adresse und einem Passwort mit mindestens 8 Zeichen. Danach bist du sofort angemeldet und auf `/app`. (Supabase lehnt manche Wegwerf-Domains ab, `example.com` etwa; eine gewöhnliche Adresse funktioniert.)
+2. **Ausgabe in CHF erfassen:** Betrag 25, Kategorie Lebensmittel, speichern. Sie erscheint in der Liste, die Monatssumme steigt.
+3. **Ausgabe in Euro erfassen:** Betrag 12, Währung auf EUR stellen, speichern. In der Liste steht der Franken-Betrag, darunter „EUR 12.00 · Kurs 0.9451 vom 11.09.2026". Das Kursdatum kann vom Ausgabedatum abweichen — an einem Wochenende veröffentlicht die EZB keinen neuen Kurs.
+4. **Monat wechseln** mit den Pfeilen. Im leeren Vormonat steht CHF 0.00. Über den laufenden Monat hinaus geht es nicht.
+5. **Löschen** einer Ausgabe: Rückfrage bestätigen, die Summe passt sich an.
+6. **Abmelden**, dann `/app` aufrufen: Weiterleitung auf die Anmeldung.
+7. **Falsches Passwort** fünfmal eingeben: Der sechste Versuch wird mit einer Wartezeit abgelehnt. Die Fehlermeldung ist für eine unbekannte Adresse und ein falsches Passwort wortgleich.
+8. **Row Level Security selbst prüfen** — mit dem öffentlichen Schlüssel an der App vorbei direkt die Datenbank fragen:
 
-Standalone guides in `docs/production/`, surfaced by `/deploy` when relevant:
+   ```bash
+   curl "https://<ref>.supabase.co/rest/v1/expenses?select=*" -H "apikey: <anon key>" -H "Authorization: Bearer <anon key>"
+   ```
 
-| Guide | Setup | What it does |
-|-------|-------|--------------|
-| [Error Tracking](docs/production/error-tracking.md) | 5 min | Sentry integration for automatic error capture |
-| [Security Headers](docs/production/security-headers.md) | 2 min | XSS, clickjacking, MIME-sniffing protection |
-| [Performance](docs/production/performance.md) | 10 min | Lighthouse checks, image optimization, caching |
-| [Database Optimization](docs/production/database-optimization.md) | 15 min | Indexing, N+1 prevention, query optimization |
-| [Rate Limiting](docs/production/rate-limiting.md) | 10 min | Upstash Redis for API abuse prevention |
+   Antwort: `[]`. Ohne gültige Anmeldung gibt die Datenbank keine Zeile heraus, egal was gefragt wird.
+9. **Daten herunterladen** unter „Konto & Daten": eine JSON-Datei mit Konto, Profil und allen Ausgaben samt Originalbetrag, Währung, Kurs und Kursdatum.
+10. **Konto löschen:** Konto, Profil und alle Ausgaben verschwinden endgültig.
 
----
+## Tests
 
-## Customize It
+```bash
+npm test        # 69 Unit- und Integrationstests (Vitest)
+npm run lint
+npm run build
+```
 
-This is your project — adapt it freely:
+Die Tests mocken den Supabase-Client und schreiben nichts in die Datenbank.
 
-1. **Your memory file** (`CLAUDE.md` or `AGENTS.md` — the one with content) — project-specific conventions and commands. Keep the managed block between the markers intact; it's refreshed on kit updates.
-2. **docs/PRD.md** — product vision and roadmap
-3. **Your agent's rules folder** — coding standards for your team
-4. **Your agent's skills folder** — tweak the workflows themselves. Note that `npx create-ai-eng-app update` regenerates the kit's own skills; put your own in separate folders, they are kept.
-5. **.claude/settings.json** — permissions (Claude Code)
+## Technik
 
----
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Supabase (PostgreSQL + Auth) · Zod · Vitest
 
-## Author
+Ein paar Entscheidungen, die im Code sonst nicht auffallen:
 
-Created by **Alex Sprogis** — AI Product Engineer & Content Creator.
+- **Anmeldung läuft über Server Actions**, nicht über ein Browser-Formular. Damit kann ein Passwort bauartbedingt nicht in der Adresszeile landen.
+- **Zugriff wird zweifach geprüft:** Weiterleitung in der App *und* Zeilenregeln in der Datenbank. Die zweite ist die verbindliche.
+- **Beträge sind Festkommazahlen** (`numeric(12,2)`), summiert in ganzen Rappen. In Fliesskomma ergibt 0.10 + 0.20 nicht 0.30, und eine Monatssumme muss stimmen.
+- **Kontolöschung läuft über eine Datenbankfunktion**, die nur auf das eigene Konto wirkt. Die App braucht deshalb keinen Administrationsschlüssel, der jede Zugriffsregel aushebeln könnte.
+- **Die Sperre gegen Passwortraten zählt im Serverprozess**, je Konto und je IP. Kein zusätzlicher Dienst, keine Kosten — aber sie beginnt nach einem Neustart von vorn, und bei mehreren Instanzen zählt jede für sich. So festgehalten in `features/PROJ-1-user-accounts-auth/design.md`.
 
-- [YouTube](https://www.youtube.com/@alex.sprogis)
-- [Website](https://alexsprogis.de)
+## Hinweis zum Betrieb
 
-## License
+Ein pausiertes Supabase-Free-Projekt (nach sieben Tagen ohne Zugriff) muss im Dashboard einmal mit **Restore** aufgeweckt werden, sonst antwortet die Datenbank nicht.
 
-MIT License — free to use for your projects.
+Das Projekt wird nicht öffentlich betrieben. Für einen echten Betrieb fehlen die Angaben zum Verantwortlichen und ein Impressum; was das Produkt mit personenbezogenen Daten tut, steht in [`docs/privacy.md`](docs/privacy.md).
