@@ -4,6 +4,8 @@ Ein kleines SaaS-Produkt, mit dem eine Privatperson ihre täglichen Ausgaben erf
 
 Entstanden als Abschlussarbeit, entwickelt **ausschliesslich** mit dem spec-getriebenen Workflow des AI Engineering Kits: `/init → /write-spec → /architecture → /tasks → /build → /qa`, ein Durchgang je Feature.
 
+**Live ansehen:** https://ausgaben-tracker-six.vercel.app — dort kannst du dich direkt registrieren und alles ausprobieren, ohne selbst etwas aufzusetzen. Wer die App lieber gegen eine eigene Supabase-Instanz laufen lässt, folgt dem Abschnitt „Selbst zum Laufen bringen" weiter unten.
+
 ## Die drei Features
 
 | ID | Feature | Was es leistet |
@@ -118,6 +120,13 @@ Ein paar Entscheidungen, die im Code sonst nicht auffallen:
 - **Beträge sind Festkommazahlen** (`numeric(12,2)`), summiert in ganzen Rappen. In Fliesskomma ergibt 0.10 + 0.20 nicht 0.30, und eine Monatssumme muss stimmen.
 - **Kontolöschung läuft über eine Datenbankfunktion**, die nur auf das eigene Konto wirkt. Die App braucht deshalb keinen Administrationsschlüssel, der jede Zugriffsregel aushebeln könnte.
 - **Die Sperre gegen Passwortraten zählt im Serverprozess**, je Konto und je IP. Kein zusätzlicher Dienst, keine Kosten — aber sie beginnt nach einem Neustart von vorn, und bei mehreren Instanzen zählt jede für sich. So festgehalten in `features/PROJ-1-user-accounts-auth/design.md`.
+
+## Wenn du selbst auf Vercel deployst
+
+Zwei Dinge, an denen es sonst scheitert:
+
+- **Die beiden Umgebungsvariablen müssen im Vercel-Projekt gesetzt sein**, unter Settings → Environment Variables: `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`, mindestens für Production. Fehlen sie, antwortet **jede** Seite mit `Internal Server Error` — auch die statische Datenschutzseite, weil schon der Anfragen-Grenzposten (`src/proxy.ts`) einen Supabase-Client baut.
+- **Nach dem Setzen muss neu gebaut werden.** Variablen mit dem Präfix `NEXT_PUBLIC_` werden beim Bauen in den Code eingebacken; ein blosser Neustart reicht nicht. In der Vercel-Oberfläche: Deployments → beim neuesten Eintrag „Redeploy".
 
 ## Hinweis zum Betrieb
 
