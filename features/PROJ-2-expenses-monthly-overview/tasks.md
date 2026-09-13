@@ -33,9 +33,21 @@
 - [x] T15 [P]  Tests der Eingabeprüfung (Betrag null, negativ, keine Zahl, Rundung auf zwei Nachkommastellen, unbekannte Kategorie, Datum in der Zukunft, Notiz über 200 Zeichen)  · files: src/lib/validation/expense.test.ts  · → AC-3, AC-4, EC-4, EC-5
 - [x] T16 [P]  Tests der Aktionen (Anlegen für die angemeldete Person, Abweisung ohne Anmeldung, Löschen nur der eigenen Zeile, Löschen bleibt bei bereits gelöschter Zeile fehlerfrei, Fehler der Datenbank wird gemeldet)  · files: src/app/app/actions.test.ts  · → AC-1, AC-9, AC-12, EC-2, EC-3, EC-6
 
+## Stufe 5 — Monatsdiagramm (aus dem Refinement vom 13.09.2026)
+
+- [ ] T17  Farbtoken für die sechs Kategorien (hell und dunkel) sowie die Bildfolgen für Ring, Balken und die Regel für reduzierte Bewegung  · files: src/app/globals.css  · → AC-13, AC-14, AC-15
+- [ ] T18  Ringgeometrie als eigene Funktion: aus der Summe je Kategorie Abschnitte mit Anteil, Versatz und Farbnummer bilden, Rundungsdifferenz dem grössten Abschnitt zuschlagen  · files: src/lib/expense-summary.ts  · → AC-13, EC-7
+- [ ] T19 [P]  Ringdiagramm als Server-Komponente: ein Abschnitt je Kategorie, Aufbau über die Bildfolge, Gesamtsumme in der Mitte  · files: src/components/month-chart.tsx  · → AC-13, AC-14, EC-7
+- [ ] T20 [P]  Hochzählende Gesamtsumme als einzige Client-Komponente; bei reduzierter Bewegung sofort der Endwert  · files: src/components/animated-amount.tsx  · → AC-14, AC-15
+- [ ] T21 [P]  Leerzustand mit ruhiger Grafik statt leerer Fläche  · files: src/components/empty-month.tsx  · → AC-16
+- [ ] T22  Zusammenfassung setzt Ring, Aufstellung mit Farbpunkt und Balken sowie den Leerzustand zusammen  · files: src/components/month-summary.tsx  · → AC-13, AC-14, AC-16
+- [ ] T23 [P]  Tests der Ringgeometrie (Versatz summiert sich auf, Anteile ergeben genau 100, eine einzige Kategorie ergibt einen Abschnitt von 100, Farbe bleibt an der Kategorie)  · files: src/lib/expense-summary.test.ts  · → AC-13, EC-7
+
 ## Parallelisierung
 
 - **Stufen sind Barrieren.** Schema (S1) → Serverlogik (S2) → Oberfläche (S3) → Feinschliff (S4).
 - **`[P]` verlangt disjunkte Dateien.** T1 und T2 schreiben dieselbe Migrationsdatei und laufen deshalb nacheinander. T6 hängt von T3, T4 und T5 ab und läuft nach ihnen. T11 setzt die Komponenten aus T7 bis T10 zusammen und ist deshalb die letzte Aufgabe der Stufe 3.
 - **Keine `[user]`-Aufgaben:** Dieses Feature braucht keine Einstellung im Dashboard.
+- **Stufe 5 kam mit dem Refinement dazu.** Sie setzt auf allem Vorherigen auf: Der Ring liest genau die Summen, die Stufe 2 berechnet. T17 und T18 liefern die Grundlage für T19 bis T22 und laufen deshalb zuerst; T22 setzt die Komponenten aus T19 bis T21 zusammen und ist die letzte Aufgabe der Stufe.
+- **Abdeckung (Stufe 5):** AC-13 → T17, T18, T19, T22, T23 · AC-14 → T17, T19, T20, T22 · AC-15 → T17, T20 · AC-16 → T21, T22 · EC-7 → T18, T19, T23.
 - **Abdeckung:** AC-1 → T6, T7, T11, T16 · AC-2 → T7 · AC-3 → T1, T3, T7, T15 · AC-4 → T1, T3, T7, T15 · AC-5 → T9, T11, T12 · AC-6 → T1, T5, T8, T11, T12, T14 · AC-7 → T4, T10, T11, T13 · AC-8 → T4, T10, T13 · AC-9 → T6, T9, T16 · AC-10 → T5, T8, T9, T11, T14 · AC-11 → T2 · AC-12 → T2, T6, T11, T16 · EC-1 → T7 · EC-2 → T6, T7, T11 · EC-3 → T2, T6, T16 · EC-4 → T1, T3, T15 · EC-5 → T1, T3, T15 · EC-6 → T6, T16. Jede AC ist durch mindestens eine Aufgabe abgedeckt.
