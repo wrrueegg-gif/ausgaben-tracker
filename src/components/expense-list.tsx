@@ -1,4 +1,5 @@
-// The month's expenses — AC-5, AC-9, AC-10.
+// The month's expenses — AC-5, AC-9, AC-10 (PROJ-2) and AC-4 (PROJ-3: the
+// original amount, the rate and the rate date are readable on a foreign-currency row).
 import { DeleteExpenseButton } from '@/components/delete-expense-button'
 import {
   Card,
@@ -14,7 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatiereChf, formatiereDatum, type AusgabeZeile } from '@/lib/expense-summary'
+import {
+  formatiereBetrag,
+  formatiereChf,
+  formatiereDatum,
+  formatiereKurs,
+  type AusgabeZeile,
+} from '@/lib/expense-summary'
 
 export function ExpenseList({ ausgaben }: { ausgaben: AusgabeZeile[] }) {
   return (
@@ -50,8 +57,19 @@ export function ExpenseList({ ausgaben }: { ausgaben: AusgabeZeile[] }) {
                     <TableCell className="text-muted-foreground">
                       {ausgabe.note ?? ''}
                     </TableCell>
-                    <TableCell className="text-right font-medium whitespace-nowrap tabular-nums">
-                      {formatiereChf(Number(ausgabe.amount_chf))}
+                    <TableCell className="text-right whitespace-nowrap">
+                      <span className="font-medium tabular-nums">
+                        {formatiereChf(Number(ausgabe.amount_chf))}
+                      </span>
+                      {/* AC-4 — a foreign-currency row shows what was paid and how
+                          it was converted, so the number can be checked. */}
+                      {ausgabe.currency !== 'CHF' ? (
+                        <span className="text-muted-foreground block text-xs tabular-nums">
+                          {formatiereBetrag(Number(ausgabe.amount_original), ausgabe.currency)}{' '}
+                          · Kurs {formatiereKurs(Number(ausgabe.exchange_rate))} vom{' '}
+                          {formatiereDatum(ausgabe.rate_date)}
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-right">
                       <DeleteExpenseButton

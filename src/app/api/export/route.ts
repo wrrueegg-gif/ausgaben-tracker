@@ -20,8 +20,9 @@ export async function GET() {
     .maybeSingle()
 
   // Row level security already limits this to the caller's own rows; the filter is
-  // the second of the two independent checks. The table arrives with PROJ-2 — until
-  // then the query fails with "relation does not exist" and the export is simply empty.
+  // the second of the two independent checks. select('*') deliberately: AC-8 asks for
+  // the original amount, the currency, the rate and the rate date alongside the franc
+  // amount, and a column list here would silently omit a column added later.
   const { data: ausgaben, error: ausgabenFehler } = await supabase
     .from('expenses')
     .select('*')

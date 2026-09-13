@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { heuteIso, NOTIZ_MAX_LAENGE, parseExpense } from './expense'
+import { heuteIso, NOTIZ_MAX_LAENGE, parseExpense, WAEHRUNGEN } from './expense'
 
 function form(werte: Record<string, string>): FormData {
   const data = new FormData()
@@ -9,7 +9,9 @@ function form(werte: Record<string, string>): FormData {
 }
 
 const GUELTIG = {
-  amount_chf: '12.50',
+  amount_original: '12.50',
+  submission_id: '11111111-2222-4333-8444-555555555555',
+  currency: 'CHF',
   category: 'Lebensmittel',
   spent_on: heuteIso(),
   note: 'Znüni',
@@ -21,7 +23,7 @@ describe('Eingabeprüfung einer Ausgabe (AC-3, AC-4, EC-4, EC-5)', () => {
 
     expect(ergebnis.ok).toBe(true)
     if (ergebnis.ok) {
-      expect(ergebnis.value.amount_chf).toBe(12.5)
+      expect(ergebnis.value.amount_original).toBe(12.5)
       expect(ergebnis.value.category).toBe('Lebensmittel')
       expect(ergebnis.value.note).toBe('Znüni')
     }
@@ -29,24 +31,48 @@ describe('Eingabeprüfung einer Ausgabe (AC-3, AC-4, EC-4, EC-5)', () => {
 
   it('AC-3: weist Betrag 0, negative Beträge und Nicht-Zahlen ab', () => {
     for (const betrag of ['0', '0.00', '-5', 'zwölf', '']) {
-      const ergebnis = parseExpense(form({ ...GUELTIG, amount_chf: betrag }))
+      const ergebnis = parseExpense(form({ ...GUELTIG, amount_original: betrag }))
       expect(ergebnis.ok).toBe(false)
-      if (!ergebnis.ok) expect(ergebnis.fieldErrors.amount_chf).toBeTruthy()
+      if (!ergebnis.ok) expect(ergebnis.fieldErrors.amount_original).toBeTruthy()
     }
   })
 
   it('EC-4: rundet auf zwei Nachkommastellen', () => {
-    const ergebnis = parseExpense(form({ ...GUELTIG, amount_chf: '12.567' }))
+    const ergebnis = parseExpense(form({ ...GUELTIG, amount_original: '12.567' }))
 
     expect(ergebnis.ok).toBe(true)
-    if (ergebnis.ok) expect(ergebnis.value.amount_chf).toBe(12.57)
+    if (ergebnis.ok) expect(ergebnis.value.amount_original).toBe(12.57)
   })
 
   it('akzeptiert ein Komma als Dezimaltrennzeichen', () => {
-    const ergebnis = parseExpense(form({ ...GUELTIG, amount_chf: '12,50' }))
+    const ergebnis = parseExpense(form({ ...GUELTIG, amount_original: '12,50' }))
 
     expect(ergebnis.ok).toBe(true)
-    if (ergebnis.ok) expect(ergebnis.value.amount_chf).toBe(12.5)
+    if (ergebnis.ok) expect(ergebnis.value.amount_original).toBe(12.5)
+  })
+
+  it('AC-1 (PROJ-3): nimmt alle vier vorgesehenen Währungen an', () => {
+    for (const waehrung of WAEHRUNGEN) {
+      const ergebnis = parseExpense(form({ ...GUELTIG, currency: waehrung }))
+      expect(ergebnis.ok).toBe(true)
+      if (ergebnis.ok) expect(ergebnis.value.currency).toBe(waehrung)
+    }
+  })
+
+  it('AC-10 (PROJ-3): weist eine Währung ab, die nicht zur Auswahl steht', () => {
+    for (const waehrung of ['JPY', 'BTC', '', 'chf']) {
+      const ergebnis = parseExpense(form({ ...GUELTIG, currency: waehrung }))
+      expect(ergebnis.ok).toBe(false)
+      if (!ergebnis.ok) expect(ergebnis.fieldErrors.currency).toMatch(/CHF, EUR, USD oder GBP/)
+    }
+  })
+
+  it('EC-5 (PROJ-3): weist eine fehlende oder unsinnige Formularkennung ab', () => {
+    for (const kennung of ['', 'keine-uuid', '12345']) {
+      const ergebnis = parseExpense(form({ ...GUELTIG, submission_id: kennung }))
+      expect(ergebnis.ok).toBe(false)
+      if (!ergebnis.ok) expect(ergebnis.fieldErrors.submission_id).toBeTruthy()
+    }
   })
 
   it('weist eine unbekannte Kategorie ab', () => {

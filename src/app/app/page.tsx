@@ -1,12 +1,14 @@
 // The signed-in overview — AC-1, AC-5, AC-6, AC-7, AC-10, AC-12 (PROJ-2) and
 // AC-12, AC-13, AC-14 from PROJ-1 (the account section at the bottom).
 import Link from 'next/link'
+import { Suspense } from 'react'
 
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
 import { ExpenseForm } from '@/components/expense-form'
 import { ExpenseList } from '@/components/expense-list'
 import { MonthSummary } from '@/components/month-summary'
 import { MonthSwitcher } from '@/components/month-switcher'
+import { RatePanel } from '@/components/rate-panel'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -37,7 +39,12 @@ export default async function AppPage({
   // Only this month's rows, and — through row level security — only this person's.
   const { data: ausgaben, error } = await supabase
     .from('expenses')
-    .select('id, amount_chf, category, spent_on, note')
+    .select(
+      'id, amount_chf, category, spent_on, note, currency, amount_original, exchange_rate, rate_date'
+    )
+    // Row level security already limits this to the caller; the explicit filter is
+    // the second of the two independent checks the design asks for.
+    .eq('user_id', user!.id)
     .gte('spent_on', monat.von)
     .lte('spent_on', monat.bis)
     .order('spent_on', { ascending: false })
@@ -62,6 +69,20 @@ export default async function AppPage({
         </Alert>
       ) : null}
 
+      {/* AC-7 — streamed in on its own, so a failing rate source never delays or
+          blocks the list and the totals (EC-3, EC-6). */}
+      <Suspense
+        fallback={
+          <Card>
+            <CardContent className="text-muted-foreground py-4 text-sm">
+              Wechselkurse werden geladen …
+            </CardContent>
+          </Card>
+        }
+      >
+        <RatePanel />
+      </Suspense>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Neue Ausgabe</CardTitle>
@@ -72,9 +93,14 @@ export default async function AppPage({
         </CardContent>
       </Card>
 
-      <MonthSummary ausgaben={zeilen} monatsName={monat.name} />
-
-      <ExpenseList ausgaben={zeilen} />
+      {/* EC-2: on a failed load the warning stands alone — an empty list beside it
+          would claim there is nothing, which is a different statement. */}
+      {error ? null : (
+        <>
+          <MonthSummary ausgaben={zeilen} monatsName={monat.name} />
+          <ExpenseList ausgaben={zeilen} />
+        </>
+      )}
 
       <Card>
         <CardHeader>

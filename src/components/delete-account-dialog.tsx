@@ -1,15 +1,16 @@
 'use client'
 
 // AC-13 — deleting an account is irreversible, so it asks once before it happens.
-// A client component because the confirmation dialog is interactive; the deletion
-// itself runs in the Server Action.
+//
+// Same shape as DeleteExpenseButton, and for the same reason: the dialog stays open
+// until the deletion has run. Closing it on click would unmount the form in the
+// portal and the action would never be dispatched.
 
-import { useFormStatus } from 'react-dom'
+import { useState, useTransition } from 'react'
 
 import { deleteAccount } from '@/app/(auth)/actions'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -20,18 +21,19 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 
-function ConfirmButton() {
-  const { pending } = useFormStatus()
-  return (
-    <AlertDialogAction type="submit" disabled={pending}>
-      {pending ? 'Wird gelöscht …' : 'Endgültig löschen'}
-    </AlertDialogAction>
-  )
-}
-
 export function DeleteAccountDialog() {
+  const [offen, setOffen] = useState(false)
+  const [laeuft, starte] = useTransition()
+
+  function loeschen() {
+    starte(async () => {
+      await deleteAccount()
+      setOffen(false)
+    })
+  }
+
   return (
-    <AlertDialog>
+    <AlertDialog open={offen} onOpenChange={setOffen}>
       <AlertDialogTrigger asChild>
         <Button variant="destructive" size="sm">
           Konto löschen
@@ -46,12 +48,14 @@ export function DeleteAccountDialog() {
             vorher herunter, wenn du sie behalten möchtest.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-          <form action={deleteAccount}>
-            <ConfirmButton />
-          </form>
-        </AlertDialogFooter>
+        <form action={loeschen}>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={laeuft}>Abbrechen</AlertDialogCancel>
+            <Button type="submit" variant="destructive" disabled={laeuft}>
+              {laeuft ? 'Wird gelöscht …' : 'Endgültig löschen'}
+            </Button>
+          </AlertDialogFooter>
+        </form>
       </AlertDialogContent>
     </AlertDialog>
   )

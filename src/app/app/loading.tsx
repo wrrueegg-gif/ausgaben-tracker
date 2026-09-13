@@ -12,6 +12,12 @@ export default function Loading() {
       </div>
 
       <Card>
+        <CardContent className="py-4">
+          <Skeleton className="h-4 w-72" />
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
           <Skeleton className="h-5 w-32" />
         </CardHeader>

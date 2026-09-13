@@ -111,12 +111,38 @@ describe('login', () => {
     expect(signInWithPassword.mock.calls.length).toBe(aufrufeVorSperre)
   })
 
-  it('EC-3: fängt einen Netzwerkfehler ab, statt hängen zu bleiben', async () => {
+  it('EC-3: fängt einen geworfenen Netzwerkfehler ab, statt hängen zu bleiben', async () => {
     signInWithPassword.mockRejectedValue(new Error('fetch failed'))
 
     const state = await login({}, form('a@b.ch', 'geheim1234'))
 
     expect(state.error).toMatch(/nicht erreichbar/)
+  })
+
+  it('EC-3: erkennt einen Netzwerkfehler auch dann, wenn die Bibliothek ihn zurückgibt', async () => {
+    // Die Auth-Bibliothek wirft einen Netzwerkfehler nicht, sie gibt ihn zurück.
+    // Ohne diese Unterscheidung sähe ein Ausfall wie ein falsches Passwort aus.
+    signInWithPassword.mockResolvedValue({
+      error: { name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' },
+    })
+
+    const state = await login({}, form('a@b.ch', 'geheim1234'))
+
+    expect(state.error).toMatch(/nicht erreichbar/)
+    expect(state.error).not.toMatch(/Passwort ist falsch/)
+  })
+
+  it('EC-3: ein Ausfall zählt nicht als Fehlversuch und sperrt niemanden aus', async () => {
+    signInWithPassword.mockResolvedValue({
+      error: { name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' },
+    })
+    for (let i = 0; i < 6; i++) await login({}, form('a@b.ch', 'geheim1234'))
+
+    // Danach muss eine richtige Anmeldung noch möglich sein.
+    signInWithPassword.mockResolvedValue({ error: null })
+    const ziel = await redirectTarget(() => login({}, form('a@b.ch', 'geheim1234')))
+
+    expect(ziel).toBe('/app')
   })
 })
 
@@ -134,6 +160,20 @@ describe('signup', () => {
 
     expect(state.fieldErrors?.password).toMatch(/mindestens 8 Zeichen/)
     expect(signUp).not.toHaveBeenCalled()
+  })
+
+  it('Registrierung: sperrt nach 5 Versuchen und trennt die Zählung von der Anmeldung', async () => {
+    signUp.mockResolvedValue({ data: { session: null }, error: { message: 'User already registered' } })
+
+    for (let i = 0; i < 5; i++) await signup({}, form('neu@b.ch', 'geheim1234'))
+    const gesperrt = await signup({}, form('neu@b.ch', 'geheim1234'))
+
+    expect(gesperrt.error).toMatch(/Zu viele Versuche/)
+
+    // Die Anmeldung derselben Adresse ist davon unberührt.
+    signInWithPassword.mockResolvedValue({ error: null })
+    const ziel = await redirectTarget(() => login({}, form('neu@b.ch', 'geheim1234')))
+    expect(ziel).toBe('/app')
   })
 
   it('EC-1: antwortet bei bereits vergebener Adresse neutral', async () => {
